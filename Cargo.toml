@@ -10,5 +10,11 @@ license = "Apache-2.0"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = ["wee_alloc", "console_error_panic_hook"]
+
 [dependencies]
 wasm-bindgen = "0.2"
+brotli = "3.3"
+wee_alloc = { version = "0.4", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
