@@ -15,10 +15,14 @@ pub fn compress(buf: Box<[u8]>) -> Result<Box<[u8]>, JsValue> {
     set_panic_hook();
     let mut out = Vec::<u8>::new();
     let params = brotli::enc::BrotliEncoderParams::default();
+
     match brotli::BrotliCompress(&mut buf.as_ref(), &mut out, &params) {
         Ok(_) => (),
-        Err(_) => return Err(JsValue::from_str("brotli dec failed")),
+        Err(e) => return Err(JsValue::from_str(&format!(
+            "Brotli compress failed: {:?}", e
+        ))),
     }
+
     Ok(out.into_boxed_slice())
 }
 
@@ -26,9 +30,13 @@ pub fn compress(buf: Box<[u8]>) -> Result<Box<[u8]>, JsValue> {
 pub fn decompress(buf: Box<[u8]>) -> Result<Box<[u8]>, JsValue> {
     set_panic_hook();
     let mut out = Vec::<u8>::new();
+
     match brotli::BrotliDecompress(&mut buf.as_ref(), &mut out) {
         Ok(_) => (),
-        Err(_) => return Err(JsValue::from_str("brotli dec failed")),
+        Err(e) => return Err(JsValue::from_str(&format!(
+            "Brotli decompress failed: {:?}", e
+        ))),
     }
+
     Ok(out.into_boxed_slice())
 }
