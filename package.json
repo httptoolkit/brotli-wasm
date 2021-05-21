@@ -2,8 +2,10 @@
   "name": "brotli-wasm",
   "version": "1.0.0",
   "description": "A compressor and decompressor for Brotli that actually works, for node & browsers",
-  "main": "index.js",
+  "main": "dist/node.js",
+  "browser": "dist/browser.js",
   "scripts": {
+    "build": "node ./build.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,5 +23,9 @@
   "bugs": {
     "url": "https://github.com/httptoolkit/brotli-wasm/issues"
   },
-  "homepage": "https://github.com/httptoolkit/brotli-wasm#readme"
+  "homepage": "https://github.com/httptoolkit/brotli-wasm#readme",
+  "devDependencies": {
+    "shelljs": "^0.8.4",
+    "wasm-pack": "^0.9.1"
+  }
 }
