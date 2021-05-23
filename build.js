@@ -5,13 +5,15 @@ if (!shell.which('wasm-pack')) {
 }
 
 // Clean up any existing built content:
-shell.rm('-rf', 'pkg');
 shell.rm('-rf', 'dist');
 shell.mkdir('dist');
 
 // Create the bundler output
+shell.rm('-rf', 'pkg');
 shell.exec('wasm-pack build --target bundler');
 shell.mv('pkg', 'pkg.bundler');
 
+// Create the node output
+shell.rm('-rf', 'pkg');
 shell.exec('wasm-pack build --target nodejs');
 shell.mv('pkg', 'pkg.node');
