@@ -2,11 +2,17 @@
   "name": "brotli-wasm",
   "version": "1.0.0",
   "description": "A compressor and decompressor for Brotli that actually works, for node & browsers",
-  "main": "dist/node.js",
-  "browser": "dist/browser.js",
+  "main": "./pkg.node/brotli_wasm.js",
+  "types": "./pkg.node/brotli_wasm.d.ts",
+  "browser": "./pkg.bundler/brotli_wasm.js",
+  "sideEffects": false,
   "scripts": {
     "build": "node ./build.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pretest": "npm run build",
+    "test": "npm run test:node && npm run test:browser",
+    "test:node": "TS_NODE_FILES=true mocha -r ts-node/register 'test/**/*.spec.ts'",
+    "test:browser": "karma start",
+    "test:browser:debug": "npm run test:browser -- --single-run=false --browsers Chrome"
   },
   "repository": {
     "type": "git",
@@ -25,7 +31,25 @@
   },
   "homepage": "https://github.com/httptoolkit/brotli-wasm#readme",
   "devDependencies": {
+    "@types/chai": "^4.2.18",
+    "@types/mocha": "^8.2.2",
+    "@types/node": "^15.6.0",
+    "buffer": "^6.0.3",
+    "chai": "^4.3.4",
+    "karma": "^6.3.2",
+    "karma-chai": "^0.1.0",
+    "karma-chrome-launcher": "^3.1.0",
+    "karma-mocha": "^2.0.1",
+    "karma-sourcemap-loader": "^0.3.8",
+    "karma-spec-reporter": "0.0.32",
+    "karma-typescript": "^5.5.1",
+    "karma-webpack": "^5.0.0",
+    "mocha": "^8.4.0",
     "shelljs": "^0.8.4",
-    "wasm-pack": "^0.9.1"
+    "ts-loader": "^9.2.1",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.4",
+    "wasm-pack": "^0.9.1",
+    "webpack": "^5.37.1"
   }
 }
