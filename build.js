@@ -6,6 +6,7 @@ if (!shell.which('wasm-pack')) {
 
 // Clean up any existing built content:
 shell.rm('-rf', 'dist');
+shell.rm('-rf', 'pkg.*');
 shell.mkdir('dist');
 
 // Create the bundler output
