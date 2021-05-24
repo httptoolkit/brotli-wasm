@@ -1,11 +1,16 @@
 {
   "name": "brotli-wasm",
   "version": "1.0.0",
-  "description": "A reliable compressor and decompressor for Brotli, using wasm for node & browsers",
+  "description": "A reliable compressor and decompressor for Brotli, supporting node & browsers via wasm",
   "main": "./pkg.node/brotli_wasm.js",
   "types": "./pkg.node/brotli_wasm.d.ts",
   "browser": "./index.browser.js",
   "sideEffects": false,
+  "files": [
+    "pkg.node",
+    "pkg.bundler",
+    "index.browser.js"
+  ],
   "scripts": {
     "build": "node ./build.js",
     "pretest": "npm run build",

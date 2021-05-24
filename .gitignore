@@ -106,3 +106,5 @@ dist
 # Rust:
 /target
 Cargo.lock
+/pkg
+/pkg.*/
