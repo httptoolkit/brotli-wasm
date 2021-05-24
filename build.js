@@ -13,8 +13,10 @@ shell.mkdir('dist');
 shell.rm('-rf', 'pkg');
 shell.exec('wasm-pack build --target bundler');
 shell.mv('pkg', 'pkg.bundler');
+shell.rm('pkg.bundler/{LICENSE,package.json,README.md,.gitignore}');
 
 // Create the node output
 shell.rm('-rf', 'pkg');
 shell.exec('wasm-pack build --target nodejs');
 shell.mv('pkg', 'pkg.node');
+shell.rm('pkg.node/{LICENSE,package.json,README.md,.gitignore}');
