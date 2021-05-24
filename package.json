@@ -4,7 +4,7 @@
   "description": "A compressor and decompressor for Brotli that actually works, for node & browsers",
   "main": "./pkg.node/brotli_wasm.js",
   "types": "./pkg.node/brotli_wasm.d.ts",
-  "browser": "./pkg.bundler/brotli_wasm.js",
+  "browser": "./index.browser.js",
   "sideEffects": false,
   "scripts": {
     "build": "node ./build.js",
