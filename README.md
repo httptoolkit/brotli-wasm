@@ -20,6 +20,11 @@ You should be able to import this directly into Node, as normal, or into a brows
 
 The browser build supports both sync (v4 or v5 syncWebAssembly mode) and async (v5 asyncWebAssembly) builds. When imported in a browser build the module always exports a _promise_, not a fixed value, as this is a requirement for synchronous builds, and you will need to `await` this after import.
 
+In both builds, the module exposes two methods:
+
+* `compress(Buffer, [options])` - compresses a buffer using Brotli, returning the compressed buffer. An optional options object can be provided. The only currently supported option is `quality`: a number between 1 and 11.
+* `decompress(Buffer)` - decompresses a buffer using Brotli, returning the original raw data.
+
 In node.js:
 
 ```javascript

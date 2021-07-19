@@ -41,7 +41,7 @@ pub fn compress(buf: Box<[u8]>, raw_options: &JsValue) -> Result<Box<[u8]>, JsVa
     } else {
         return Err(JsValue::from_str("Options is not an object"));
     }
-    
+
     let mut out = Vec::<u8>::new();
     let mut params = brotli::enc::BrotliEncoderParams::default();
     params.quality = options.quality;
