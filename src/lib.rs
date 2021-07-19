@@ -1,5 +1,6 @@
 use brotli;
 use wasm_bindgen::prelude::*;
+use serde::{Serialize, Deserialize};
 
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
@@ -10,11 +11,42 @@ fn set_panic_hook() {
     console_error_panic_hook::set_once();
 }
 
-#[wasm_bindgen(js_name = compress)]
-pub fn compress(buf: Box<[u8]>) -> Result<Box<[u8]>, JsValue> {
+#[wasm_bindgen(typescript_custom_section)]
+const TS_APPEND_CONTENT: &'static str = r#"
+
+type Options = {
+    quality?: number
+};
+
+export function compress(buf: Uint8Array, options?: Options): Uint8Array;
+"#;
+
+#[derive(Serialize, Deserialize)]
+pub struct Options {
+    #[serde(default = "default_quality")]
+    pub quality: i32
+}
+
+fn default_quality() -> i32 { 11 }
+
+#[wasm_bindgen(js_name = compress, skip_typescript)]
+pub fn compress(buf: Box<[u8]>, raw_options: &JsValue) -> Result<Box<[u8]>, JsValue> {
     set_panic_hook();
+
+    let options: Options;
+    if raw_options.is_undefined() {
+        options = serde_json::from_str("{}").unwrap();
+    } else if raw_options.is_object() {
+        options = raw_options.into_serde().unwrap();
+    } else {
+        return Err(JsValue::from_str(&format!(
+            "Options is not an object"
+        )));
+    }
+    
     let mut out = Vec::<u8>::new();
-    let params = brotli::enc::BrotliEncoderParams::default();
+    let mut params = brotli::enc::BrotliEncoderParams::default();
+    params.quality = options.quality;
 
     match brotli::BrotliCompress(&mut buf.as_ref(), &mut out, &params) {
         Ok(_) => (),
