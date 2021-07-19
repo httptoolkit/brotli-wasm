@@ -39,9 +39,7 @@ pub fn compress(buf: Box<[u8]>, raw_options: &JsValue) -> Result<Box<[u8]>, JsVa
     } else if raw_options.is_object() {
         options = raw_options.into_serde().unwrap();
     } else {
-        return Err(JsValue::from_str(&format!(
-            "Options is not an object"
-        )));
+        return Err(JsValue::from_str("Options is not an object"));
     }
     
     let mut out = Vec::<u8>::new();
