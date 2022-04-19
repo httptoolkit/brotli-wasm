@@ -31,7 +31,7 @@ In node.js:
 const * as brotli = require('brotli-wasm');
 
 const compressedData = brotli.compress(Buffer.from('some input'));
-const depressedData = brotli.decompress(compressedData);
+const decompressedData = brotli.decompress(compressedData);
 
 console.log(Buffer.from(decompressedData).toString('utf8')); // Prints 'some input'
 ```
@@ -44,7 +44,7 @@ import * as brotliPromise from 'brotli-wasm';
 const brotli = await brotliPromise; // Import is async in browsers due to wasm requirements!
 
 const compressedData = brotli.compress(Buffer.from('some input'));
-const depressedData = brotli.decompress(compressedData);
+const decompressedData = brotli.decompress(compressedData);
 
 console.log(Buffer.from(decompressedData).toString('utf8')); // Prints 'some input'
 ```
