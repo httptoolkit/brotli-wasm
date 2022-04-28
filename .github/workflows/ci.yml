@@ -7,7 +7,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [10.x, 12.x, v14.6.0, 14.x, '*']
+        node-version: [10.x, 12.x, 'v14.18.3', 14.x, '*']
 
     steps:
       - uses: actions/checkout@v2
@@ -22,3 +22,10 @@ jobs:
 
       - run: npm install --no-package-lock
       - run: npm test
+
+      - run: npm pack
+      - uses: actions/upload-artifact@v2
+        if: matrix.node-version == 'v14.18.3'
+        with:
+          path: brotli-wasm-*.tgz
+          if-no-files-found: error
