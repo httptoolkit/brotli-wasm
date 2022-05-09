@@ -68,4 +68,26 @@ describe("Brotli-wasm", () => {
         ).toString('utf8');
         expect(result).to.equal(input);
     });
+
+    it("can streamingly decompress data", () => {
+        // Generated with: echo -n '$CONTENT' | brotli --stdout - | base64
+        const input = Buffer.from('GxoAABypU587dC0k9ianQOgqjS32iUTcCA==', 'base64');
+        const input1 = input.slice(0, input.length / 2);
+        const input2 = input.slice(input.length / 2);
+        const stream = new brotli.DecompressStream();
+        const output1 = stream.decompress(input1, 100);
+        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
+        const output2 = stream.decompress(input2, 100);
+        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        expect(Buffer.concat([output1, output2]).toString('utf8')).to.equal('Brotli brotli brotli brotli');
+    });
+
+    it("cleanly fails when streamingly decompressing garbage", () => {
+        const input = Buffer.from("This is not brotli data, it's just a string");
+        const stream = new brotli.DecompressStream();
+        expect(() =>
+            stream.decompress(input, 100)
+        ).to.throw('Brotli streaming decompress failed');
+        expect(stream.result()).to.lt(0);
+    });
 });
