@@ -1,4 +1,4 @@
-use crate::{set_panic_hook, Options};
+use crate::set_panic_hook;
 use brotli::enc::encode::{
     BrotliEncoderCompressStream, BrotliEncoderCreateInstance, BrotliEncoderDestroyInstance,
     BrotliEncoderIsFinished, BrotliEncoderOperation, BrotliEncoderParameter,
@@ -38,28 +38,26 @@ impl Drop for CompressStream {
 #[wasm_bindgen]
 impl CompressStream {
     #[wasm_bindgen(constructor)]
-    pub fn new(raw_options: &JsValue) -> Result<CompressStream, JsValue> {
+    pub fn new(quality: Option<u32>) -> CompressStream {
         set_panic_hook();
-        let options: Options = if raw_options.is_undefined() {
-            serde_json::from_str("{}").unwrap()
-        } else if raw_options.is_object() {
-            raw_options.into_serde().unwrap()
-        } else {
-            return Err(JsValue::from_str("Options is not an object"));
-        };
         let alloc = StandardAlloc::default();
         let mut state = BrotliEncoderCreateInstance(alloc);
-        BrotliEncoderSetParameter(
-            &mut state,
-            BrotliEncoderParameter::BROTLI_PARAM_QUALITY,
-            options.quality as u32,
-        );
-        Ok(Self {
+        match quality {
+            None => (),
+            Some(quality) => {
+                BrotliEncoderSetParameter(
+                    &mut state,
+                    BrotliEncoderParameter::BROTLI_PARAM_QUALITY,
+                    quality,
+                );
+            }
+        }
+        Self {
             state,
             result: BrotliStreamResult::Init as i32,
             total_out: 0,
             last_input_offset: 0,
-        })
+        }
     }
 
     pub fn compress(
