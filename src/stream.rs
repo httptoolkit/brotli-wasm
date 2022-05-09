@@ -81,6 +81,9 @@ impl CompressStream {
             Some(input) => {
                 let op = BrotliEncoderOperation::BROTLI_OPERATION_PROCESS;
                 let mut available_in = input.len();
+                // `BrotliEncoderCompressStream` does not return a `BrotliResult` but returns a boolean,
+                // which is different from `BrotliDecompressStream`.
+                // But the requirement for input/output buf is common so we reused `BrotliStreamResult` to report it.
                 let ret = BrotliEncoderCompressStream(
                     &mut self.state,
                     op,
