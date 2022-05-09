@@ -1,3 +1,5 @@
+pub mod stream;
+
 use brotli;
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
@@ -6,7 +8,7 @@ use serde::{Serialize, Deserialize};
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-fn set_panic_hook() {
+pub fn set_panic_hook() {
     #[cfg(feature="console_error_panic_hook")]
     console_error_panic_hook::set_once();
 }
