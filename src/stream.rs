@@ -95,14 +95,14 @@ impl CompressStream {
                     &mut nop_callback,
                 );
                 if ret != 0 {
-                    if available_out == 0 {
-                        self.result = BrotliStreamResult::NeedsMoreOutput as i32;
-                        self.last_input_offset = input_offset;
-                        Ok(output.into_boxed_slice())
-                    } else if available_in == 0 {
+                    if available_in == 0 {
                         output.truncate(output_offset);
                         self.result = BrotliStreamResult::NeedsMoreInput as i32;
                         self.last_input_offset = input.len();
+                        Ok(output.into_boxed_slice())
+                    } else if available_out == 0 {
+                        self.result = BrotliStreamResult::NeedsMoreOutput as i32;
+                        self.last_input_offset = input_offset;
                         Ok(output.into_boxed_slice())
                     } else {
                         self.result = -1;
