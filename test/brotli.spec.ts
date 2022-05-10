@@ -189,4 +189,30 @@ describe("Brotli-wasm", () => {
 
         expect(decOutput.toString('utf8')).to.equal(s);
     });
+
+    it("streaming compressing can handle needing more output", () => {
+        // Suppressed currently since it requires a large file as input
+        return;
+        // const input = fs.readFileSync('test/encLongInput.bin');
+        const input = Buffer.from("test");
+        const stream = new brotli.CompressStream();
+        const output1 = stream.compress(input, 1);
+        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreOutput);
+        const output2 = stream.compress(input.slice(stream.last_input_offset()), 1640000);
+        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
+        const output3 = stream.compress(undefined, 1640000);
+        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const output = Buffer.concat([output1, output2, output3]);
+        expect(Buffer.from(brotli.decompress(output)).toString('base64')).to.equal(input.toString('base64'));
+    });
+
+    it("streaming decompressing can handle needing more output", () => {
+        const input = Buffer.from('GxoAABypU587dC0k9ianQOgqjS32iUTcCA==', 'base64');
+        const stream = new brotli.DecompressStream();
+        const output1 = stream.decompress(input, 1);
+        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreOutput);
+        const output2 = stream.decompress(input.slice(stream.last_input_offset()), 100);
+        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        expect(Buffer.concat([output1, output2]).toString('utf8')).to.equal('Brotli brotli brotli brotli');
+    });
 });
