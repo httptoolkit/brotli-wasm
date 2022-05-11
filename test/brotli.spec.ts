@@ -95,9 +95,10 @@ describe("Brotli-wasm", () => {
         expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
         const output3 = stream.compress(undefined, 100);
         expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
-        // It will be CwOAVGVzdCBpbjgACHB1dCBkYXRhAw== which is different.
+        // It will be different from non-streaming result.
         // But it can still be decompressed back to the original string.
-        // expect(Buffer.concat([output1, output2, output3]).toString('base64')).to.equal('CweAVGVzdCBpbnB1dCBkYXRhAw==');
+        let output = Buffer.concat([output1, output2, output3]);
+        expect(Buffer.from(brotli.decompress(output)).toString('base64')).to.equal(input.toString('base64'));
     });
 
     it("can streamingly decompress data", () => {
@@ -137,7 +138,7 @@ describe("Brotli-wasm", () => {
         expect(stream.result()).to.lt(0);
     });
 
-    it("can compress & decompress back to the original result", () => {
+    it("can streamingly compress & decompress back to the original result", () => {
         const s = "Some thrilling text I urgently need to compress";
         const encInput = Buffer.from(s);
         const encInput1 = encInput.slice(0, encInput.length / 2);
@@ -163,7 +164,7 @@ describe("Brotli-wasm", () => {
         expect(decOutput.toString('utf8')).to.equal(s);
     });
 
-    it("can compress & decompress back to the original result with a different quality setting", () => {
+    it("can streamingly compress & decompress back to the original result with a different quality setting", () => {
         const s = "Some thrilling text I urgently need to compress";
         const encInput = Buffer.from(s);
         const encInput1 = encInput.slice(0, encInput.length / 2);
