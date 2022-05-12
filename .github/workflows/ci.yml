@@ -1,5 +1,5 @@
 name: CI
-on: push
+on: [push, pull_request]
 jobs:
   build:
     name: Build & test
@@ -7,7 +7,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [10.x, 12.x, v14.6.0, 14.x, '*']
+        node-version: [10.x, 12.x, v14.18.3, 14.x, 16.x, 18.x, '*']
 
     steps:
       - uses: actions/checkout@v2
