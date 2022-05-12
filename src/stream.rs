@@ -121,7 +121,7 @@ impl CompressStream {
                 let op = BrotliEncoderOperation::BROTLI_OPERATION_FINISH;
                 let input = Vec::new().into_boxed_slice();
                 let mut available_in = 0;
-                while BrotliEncoderIsFinished(&mut self.state) == 0 {
+                while BrotliEncoderIsFinished(&mut self.state) == 0 && available_out > 0 {
                     let ret = BrotliEncoderCompressStream(
                         &mut self.state,
                         op,
@@ -141,8 +141,12 @@ impl CompressStream {
                         ));
                     }
                 }
-                output.truncate(output_offset);
-                self.result = BrotliStreamResult::ResultSuccess as i32;
+                self.result = if available_out == 0 {
+                    BrotliStreamResult::NeedsMoreOutput as i32
+                } else {
+                    output.truncate(output_offset);
+                    BrotliStreamResult::ResultSuccess as i32
+                };
                 self.last_input_offset = 0;
                 Ok(output.into_boxed_slice())
             }
