@@ -191,7 +191,8 @@ describe("Brotli-wasm", () => {
         expect(decOutput.toString('utf8')).to.equal(s);
     });
 
-    it("streaming compressing can handle needing more output when action is process", () => {
+    it("streaming compressing can handle needing more output when action is process", function () {
+        this.timeout(10000);
         // The input should be more than about 1.6MB with enough randomness
         // to make the compressor ask for more output space when the action is PROCESS
         const input = genRandBytes(1600000);
