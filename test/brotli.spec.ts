@@ -191,15 +191,14 @@ describe("Brotli-wasm", () => {
         expect(decOutput.toString('utf8')).to.equal(s);
     });
 
-    it("streaming compressing can handle needing more output", () => {
-        // Suppressed currently since it requires a large file as input
-        return;
-        // const input = fs.readFileSync('test/encLongInput.bin');
-        const input = Buffer.from("test");
+    it("streaming compressing can handle needing more output when action is process", () => {
+        // The input should be more than about 1.6MB with enough randomness
+        // to make the compressor ask for more output space when the action is PROCESS
+        const input = genRandBytes(1600000);
         const stream = new brotli.CompressStream();
         const output1 = stream.compress(input, 1);
         expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreOutput);
-        const output2 = stream.compress(input.slice(stream.last_input_offset()), 1640000);
+        const output2 = stream.compress(input.slice(stream.last_input_offset()), 1500000);
         expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
         const output3 = stream.compress(undefined, 1640000);
         expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
@@ -217,3 +216,19 @@ describe("Brotli-wasm", () => {
         expect(Buffer.concat([output1, output2]).toString('utf8')).to.equal('Brotli brotli brotli brotli');
     });
 });
+
+/**
+ * Generate random bytes for tests
+ * @param size Must be a multiple of 4
+ */
+function genRandBytes(size: number) {
+    const buf = [] as number[];
+    for (let i = 0; i < size / 4; i++) {
+        const rand = Math.floor(Math.random() * Math.pow(2, 32));
+        buf.push((rand >> 0) & 0xff);
+        buf.push((rand >> 8) & 0xff);
+        buf.push((rand >> 16) & 0xff);
+        buf.push((rand >> 24) & 0xff);
+    }
+    return Buffer.from(buf);
+}
