@@ -206,6 +206,19 @@ describe("Brotli-wasm", () => {
         expect(Buffer.from(brotli.decompress(output)).toString('base64')).to.equal(input.toString('base64'));
     });
 
+    it("streaming compressing can handle needing more output when action is finish", () => {
+        const input = Buffer.from('Some thrilling text I urgently need to compress');
+        const stream = new brotli.CompressStream();
+        const output1 = stream.compress(input, 1);
+        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
+        const output2 = stream.compress(undefined, 1);
+        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreOutput);
+        const output3 = stream.compress(undefined, 100);
+        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const output = Buffer.concat([output1, output2, output3]);
+        expect(Buffer.from(brotli.decompress(output)).toString('base64')).to.equal(input.toString('base64'));
+    });
+
     it("streaming decompressing can handle needing more output", () => {
         const input = Buffer.from('GxoAABypU587dC0k9ianQOgqjS32iUTcCA==', 'base64');
         const stream = new brotli.DecompressStream();
