@@ -38,7 +38,11 @@ module.exports = function(config) {
             resolve: {
                 extensions: ['.ts', '.js'],
                 fallback: {
-                    buffer: require.resolve('buffer/')
+                    buffer: require.resolve('buffer/'),
+                    fs: require.resolve('graceful-fs/graceful-fs'),
+                    path: require.resolve('path-browserify/'),
+                    constants: require.resolve('constants-browserify/'),
+                    stream: require.resolve('stream-browserify/'),
                 }
             },
             experiments: {
@@ -46,7 +50,7 @@ module.exports = function(config) {
             },
             plugins: [
                 new webpack.ProvidePlugin({
-                    Buffer: ['buffer', 'Buffer'],
+                    Buffer: ['buffer', 'Buffer'],process: 'process/browser',
                 })
             ],
             output: {

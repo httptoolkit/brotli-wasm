@@ -53,6 +53,64 @@ You'll need a [browser Buffer polyfill](https://www.npmjs.com/package/browserify
 
 If you want to support node & browsers with the same code, you can use the latter `await` form here everywhere (since awaiting the fixed value in node just returns the value as-is).
 
+
+## Vite and Rollup
+
+For usage in Vite, you have to use the `vite-plugin-wasm` and `static-files` plugins. The config looks like this:
+
+```javascript
+import { defineConfig } from "vite";
+import wasm from "vite-plugin-wasm";
+import { wasm as rollupWasm } from "@rollup/plugin-wasm";
+import { viteStaticCopy } from "vite-plugin-static-copy";
+
+// https://vitejs.dev/config/
+export default defineConfig({
+    plugins: [
+        viteStaticCopy({
+            targets: [
+                {
+                    src: require.resolve("brotli-wasm/pkg.web/brotli_wasm_bg.wasm"),
+                    dest: "."
+                }
+            ]
+        }),
+        wasm(),
+        topLevelAwait()
+    ],
+    build: {
+        minify: false,
+        target: ["esnext"],
+        sourcemap: true,
+        rollupOptions: {
+            treeshake: false,
+            plugins: [rollupWasm()]
+        },
+        ssr: false
+    }
+});
+```
+
+and you can call it in your code like this:
+
+```typescript
+import init, { decompress } from "brotli-wasm/pkg.web/brotli_wasm";
+
+const initPromise = init("brotli_wasm_bg.wasm");
+export const brotliDecompress = zlib.brotliDecompress
+    ? promisify(zlib.brotliDecompress)
+    : async (buffer: Uint8Array): Promise<Uint8Array | undefined> => {
+          try {
+              await initPromise;
+              const output = decompress(buffer);
+              return output;
+          } catch (e) {
+              console.error(e);
+              return;
+          }
+      };
+```
+
 ## Alternatives
 
 There's a few other packages that do similar things, but I found they were all unusable and/or unmaintained:
