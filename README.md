@@ -97,9 +97,7 @@ and you can call it in your code like this:
 import init, { decompress } from "brotli-wasm/pkg.web/brotli_wasm";
 
 const initPromise = init("brotli_wasm_bg.wasm");
-export const brotliDecompress = zlib.brotliDecompress
-    ? promisify(zlib.brotliDecompress)
-    : async (buffer: Uint8Array): Promise<Uint8Array | undefined> => {
+export const brotliDecompress = async (buffer: Uint8Array): Promise<Uint8Array | undefined> => {
           try {
               await initPromise;
               const output = decompress(buffer);

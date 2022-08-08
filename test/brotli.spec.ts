@@ -8,29 +8,27 @@ if (typeof global.TextEncoder === 'undefined') {
 
 import { expect } from 'chai';
 import * as brotliPromise from '..';
-import init from '../pkg.web/brotli_wasm';
-import * as brotliWeb from '../pkg.web/brotli_wasm';
+import init from '../index.web.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
 const webWasmPath = path.join(__dirname, '../pkg.web/brotli_wasm_bg.wasm');
 
+const bundlerName = 'bundler';
+const webName = 'web (vite compatible)';
+const canReadFile = typeof fs.readFileSync !== 'undefined';
+const initOpts = canReadFile ? fs.readFileSync(webWasmPath) : undefined;
 describe('Brotli-wasm', () => {
     let brotli!: typeof import('..');
-    for (let i = 0; i < 2; i++) {
-        let bundlerToUse = i === 0 ? 'bundler' : 'web (vite compatible)';
+
+    for (const bundlerToUse of [bundlerName, webName]) {
         let bundlerTestName = `Brotli ${bundlerToUse}`;
         describe(bundlerTestName, function () {
             beforeEach(async () => {
-                if (i === 0) {
+                if (bundlerToUse === bundlerName) {
                     brotli = await brotliPromise;
                 } else {
-                    brotli = brotliWeb;
-                }
-                if (typeof fs.readFileSync === 'undefined') {
-                    await init();
-                } else {
-                    await init(fs.readFileSync(webWasmPath));
+                    brotli = await init(initOpts);
                 }
             });
 
