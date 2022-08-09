@@ -1,5 +1,5 @@
-// The web version needs to be explicitly initiated, but we want the API to be the same
-// as the bundler version, so we write this small wrapper to make it work.
+// In pure ESM web bundles, you must call init() and wait for the promised result before you can
+// call any module methods. To make that as easy as possible, this module directly exposes the
+// init() promise result, and returns the methods at the end of the promise.
 import init, * as brotliWasm from "./pkg.web/brotli_wasm";
-
-export default initOpts => init(initOpts).then(() => brotliWasm);
+export default init().then(() => brotliWasm);

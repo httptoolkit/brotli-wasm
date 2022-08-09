@@ -1,7 +1,13 @@
+// Karma-vite breaks Karma in Node <14, and browser tests don't depend on Node versions, so
+// we just skip the tests in those environments.
+const nodeMajorVersion = parseInt(process.versions.node.split('.'));
+if (nodeMajorVersion <= 14) {
+    console.log('Skipping browser tests in old node version');
+    process.exit(0);
+}
+
 const tmp = require('tmp');
 tmp.setGracefulCleanup();
-
-const webpack = require('webpack');
 
 const outputDir = tmp.dirSync({ unsafeCleanup: true }).name;
 
@@ -38,21 +44,12 @@ module.exports = function(config) {
             resolve: {
                 extensions: ['.ts', '.js'],
                 fallback: {
-                    buffer: require.resolve('buffer/'),
-                    fs: require.resolve('graceful-fs/graceful-fs'),
-                    path: require.resolve('path-browserify/'),
-                    constants: require.resolve('constants-browserify/'),
-                    stream: require.resolve('stream-browserify/'),
+                    crypto: false
                 }
             },
             experiments: {
                 asyncWebAssembly: true
             },
-            plugins: [
-                new webpack.ProvidePlugin({
-                    Buffer: ['buffer', 'Buffer'],process: 'process/browser',
-                })
-            ],
             output: {
                 path: outputDir
             }
