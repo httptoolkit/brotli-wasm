@@ -3,5 +3,10 @@
 // allow synchronous import of WebAssembly from an entrypoint.
 module.exports = import("./pkg.bundler/brotli_wasm.js");
 
-// We don't want to do this for _all_ usage, because dynamic import isn't
-// supported in older node versions.
+// In addition, we provide a default export with the same value, for compatibility
+// with the pure ESM web bundle:
+module.exports.default = module.exports;
+
+// Without this, ts-loader gets annoyed by imports for the pure type. Clear ts-loader bug,
+// but this is a quick & easy fix on our end:
+module.exports.BrotliWasmType = undefined;
