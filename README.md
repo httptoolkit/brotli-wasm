@@ -16,14 +16,16 @@ This is battle-tested, in production use in both node & browsers as part of [HTT
 npm install brotli-wasm
 ```
 
-You should be able to import this directly into Node, as normal, or into a browser using any bundler that supports ES modules & webassembly (e.g. Webpack v4 or v5).
+You should be able to import this directly into Node, as normal, or in a browser using any bundler that supports ES modules & webassembly (e.g. Webpack v4 or v5, Vite, Rollup, and most others).
 
-The browser build supports both sync (v4 or v5 syncWebAssembly mode) and async (v5 asyncWebAssembly) builds. When imported in a browser build the module always exports a _promise_, not a fixed value, as this is a requirement for synchronous builds, and you will need to `await` this after import.
+For each target (node.js, commonjs bundlers & ESM bundlers) this module exports a different WASM file & setup, with a slightly different entrypoint. These entrypoints all expose a consistent default-export API, in addition to some other exports that may vary (e.g. Node exposes the brotli methods synchronously, while browsers always require an `await` due to WASM limitations).
 
-In both builds, the module exposes two methods:
+In all builds (after waiting for the exported promise in browsers) the module exposes two core methods:
 
 * `compress(Buffer, [options])` - compresses a buffer using Brotli, returning the compressed buffer. An optional options object can be provided. The only currently supported option is `quality`: a number between 1 and 11.
 * `decompress(Buffer)` - decompresses a buffer using Brotli, returning the original raw data.
+
+### Usage
 
 In node.js:
 
@@ -39,7 +41,7 @@ console.log(Buffer.from(decompressedData).toString('utf8')); // Prints 'some inp
 In browsers:
 
 ```javascript
-import * as brotliPromise from 'brotli-wasm';
+import brotliPromise from 'brotli-wasm'; // Import the default export
 
 const brotli = await brotliPromise; // Import is async in browsers due to wasm requirements!
 
@@ -49,65 +51,9 @@ const decompressedData = brotli.decompress(compressedData);
 console.log(Buffer.from(decompressedData).toString('utf8')); // Prints 'some input'
 ```
 
-You'll need a [browser Buffer polyfill](https://www.npmjs.com/package/browserify-zlib) for the above, or you can do the same using TextEncoder/Decoder instead if you prefer.
+The package itself has no runtime dependencies, but you will need a [browser Buffer polyfill](https://www.npmjs.com/package/browserify-zlib) for the above example code, or you can do the same using TextEncoder/Decoder instead if you prefer.
 
-If you want to support node & browsers with the same code, you can use the latter `await` form here everywhere (since awaiting the fixed value in node just returns the value as-is).
-
-
-## Vite and Rollup
-
-For usage in Vite, you have to use the `vite-plugin-wasm` and `static-files` plugins. The config looks like this:
-
-```javascript
-import { defineConfig } from "vite";
-import wasm from "vite-plugin-wasm";
-import { wasm as rollupWasm } from "@rollup/plugin-wasm";
-import { viteStaticCopy } from "vite-plugin-static-copy";
-
-// https://vitejs.dev/config/
-export default defineConfig({
-    plugins: [
-        viteStaticCopy({
-            targets: [
-                {
-                    src: require.resolve("brotli-wasm/pkg.web/brotli_wasm_bg.wasm"),
-                    dest: "."
-                }
-            ]
-        }),
-        wasm(),
-        topLevelAwait()
-    ],
-    build: {
-        minify: false,
-        target: ["esnext"],
-        sourcemap: true,
-        rollupOptions: {
-            treeshake: false,
-            plugins: [rollupWasm()]
-        },
-        ssr: false
-    }
-});
-```
-
-and you can call it in your code like this:
-
-```typescript
-import init, { decompress } from "brotli-wasm/pkg.web/brotli_wasm";
-
-const initPromise = init("brotli_wasm_bg.wasm");
-export const brotliDecompress = async (buffer: Uint8Array): Promise<Uint8Array | undefined> => {
-          try {
-              await initPromise;
-              const output = decompress(buffer);
-              return output;
-          } catch (e) {
-              console.error(e);
-              return;
-          }
-      };
-```
+If you want to support node & browsers with the same code, you can use the `await` form with the default export everywhere.
 
 ## Alternatives
 
