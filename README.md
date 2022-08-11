@@ -25,6 +25,8 @@ In all builds (after waiting for the exported promise in browsers) the module ex
 * `compress(Buffer, [options])` - compresses a buffer using Brotli, returning the compressed buffer. An optional options object can be provided. The only currently supported option is `quality`: a number between 1 and 11.
 * `decompress(Buffer)` - decompresses a buffer using Brotli, returning the original raw data.
 
+For advanced use data-streaming use cases, `CompressStream` and `DecompressStream` classes for streaming compression are also available. See [the tests](https://github.com/httptoolkit/brotli-wasm/blob/main/test/brotli.spec.ts) for example usage.
+
 ### Usage
 
 In node.js:
