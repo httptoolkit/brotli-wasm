@@ -124,6 +124,8 @@ await inputStream
 console.log(output) // Prints 'some input'
 ```
 
+Note that `TransformStream` has become available in all browsers as of mid-2022. https://caniuse.com/mdn-api_transformstream
+
 ## Alternatives
 
 There's a few other packages that do similar things, but I found they were all unusable and/or unmaintained:
