@@ -29,7 +29,9 @@ For advanced use data-streaming use cases, `CompressStream` and `DecompressStrea
 
 ### Usage
 
-In node.js:
+If you want to support node & browsers with the same code, you can use the `await` form with the default export everywhere.
+
+#### In node.js:
 
 ```javascript
 const * as brotli = require('brotli-wasm');
@@ -40,22 +42,87 @@ const decompressedData = brotli.decompress(compressedData);
 console.log(Buffer.from(decompressedData).toString('utf8')); // Prints 'some input'
 ```
 
-In browsers:
+#### In browsers:
 
 ```javascript
-import brotliPromise from 'brotli-wasm'; // Import the default export
+import brotliPromise from 'brotli-wasm' // Import the default export
 
-const brotli = await brotliPromise; // Import is async in browsers due to wasm requirements!
+const brotli = await brotliPromise // Import is async in browsers due to wasm requirements!
 
-const compressedData = brotli.compress(Buffer.from('some input'));
-const decompressedData = brotli.decompress(compressedData);
+const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
 
-console.log(Buffer.from(decompressedData).toString('utf8')); // Prints 'some input'
+const input = 'some input'
+
+const uncompressedData = textEncoder.encode('some input')
+// const uncompressedData = Buffer.from('some input') // With Buffer polyfill
+const compressedData = brotli.compress(uncompressedData)
+const decompressedData = brotli.decompress(compressedData)
+
+console.log(textDecoder.decode(decompressedData)) // Prints 'some input'
+// console.log(Buffer.from(decompressedData).toString('utf8')); // Prints 'some input' with Buffer polyfill
 ```
 
-The package itself has no runtime dependencies, but you will need a [browser Buffer polyfill](https://www.npmjs.com/package/browserify-zlib) for the above example code, or you can do the same using TextEncoder/Decoder instead if you prefer.
+The package itself has no runtime dependencies, you will need [browser Buffer polyfill](https://www.npmjs.com/package/browserify-zlib) if you prefer using `Buffer` over using `TextEncoder/TextDecoder`.
 
-If you want to support node & browsers with the same code, you can use the `await` form with the default export everywhere.
+#### In browser with streams:
+```
+import brotliPromise from 'brotli-wasm' // Import the default export
+
+const brotli = await brotliPromise // Import is async in browsers due to wasm requirements!
+
+const input = 'some input'
+
+const inputStream = new ReadableStream({
+  start (controller) {
+	controller.enqueue(input)
+	controller.close()
+  }
+})
+const textEncoderStream = new TextEncoderStream()
+const compressStream = new brotli.CompressStream()
+const compressionStream = new TransformStream({
+  start () {},
+  transform (chunk, controller) {
+	controller.enqueue(compressStream.compress(chunk, 100))
+  },
+  flush (controller) {
+	if (compressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput) {
+	  controller.enqueue(compressStream.compress(undefined, 100))
+	}
+	controller.terminate()
+  }
+})
+
+const decompressStream = new brotli.DecompressStream()
+const decompressionStream = new TransformStream({
+  start () {},
+  transform (chunk, controller) {
+	controller.enqueue(decompressStream.decompress(chunk, 100))
+  },
+  flush (controller) {
+	if (decompressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput) {
+	  controller.enqueue(decompressStream.decompress(undefined, 100))
+	}
+	controller.terminate()
+  }
+})
+const textDecoderStream = new TextDecoderStream()
+const outputStream = new WritableStream({
+  write (chunk) {
+	output += chunk
+  }
+})
+
+let output = ''
+await inputStream
+  .pipeThrough(textEncoderStream)
+  .pipeThrough(compressionStream)
+  .pipeThrough(decompressionStream)
+  .pipeThrough(textDecoderStream)
+  .pipeTo(outputStream)
+console.log(output) // Prints 'some input'
+```
 
 ## Alternatives
 
