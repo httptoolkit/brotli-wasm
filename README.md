@@ -29,12 +29,12 @@ For advanced use data-streaming use cases, `CompressStream` and `DecompressStrea
 
 ### Usage
 
-If you want to support node & browsers with the same code, you can use the `await` form with the default export everywhere.
+If you want to support node & browsers with the same code, you can use the `await` browser-compatible form with the default export everywhere.
 
 #### In node.js:
 
 ```javascript
-const * as brotli = require('brotli-wasm');
+const brotli = require('brotli-wasm');
 
 const compressedData = brotli.compress(Buffer.from('some input'));
 const decompressedData = brotli.decompress(compressedData);
@@ -45,83 +45,84 @@ console.log(Buffer.from(decompressedData).toString('utf8')); // Prints 'some inp
 #### In browsers:
 
 ```javascript
-import brotliPromise from 'brotli-wasm' // Import the default export
+import brotliPromise from 'brotli-wasm'; // Import the default export
 
-const brotli = await brotliPromise // Import is async in browsers due to wasm requirements!
+const brotli = await brotliPromise; // Import is async in browsers due to wasm requirements!
 
-const textEncoder = new TextEncoder()
-const textDecoder = new TextDecoder()
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
 
-const input = 'some input'
+const input = 'some input';
 
-const uncompressedData = textEncoder.encode('some input')
-// const uncompressedData = Buffer.from('some input') // With Buffer polyfill
-const compressedData = brotli.compress(uncompressedData)
-const decompressedData = brotli.decompress(compressedData)
+const uncompressedData = textEncoder.encode('some input');
+const compressedData = brotli.compress(uncompressedData);
+const decompressedData = brotli.decompress(compressedData);
 
-console.log(textDecoder.decode(decompressedData)) // Prints 'some input'
-// console.log(Buffer.from(decompressedData).toString('utf8')); // Prints 'some input' with Buffer polyfill
+console.log(textDecoder.decode(decompressedData)); // Prints 'some input'
 ```
 
-The package itself has no runtime dependencies, you will need [browser Buffer polyfill](https://www.npmjs.com/package/browserify-zlib) if you prefer using `Buffer` over using `TextEncoder/TextDecoder`.
+The package itself has no runtime dependencies, although if you prefer using `Buffer` over using `TextEncoder/TextDecoder` you may want a [browser Buffer polyfill](https://www.npmjs.com/package/browserify-zlib).
 
 #### In browser with streams:
-```
-import brotliPromise from 'brotli-wasm' // Import the default export
 
-const brotli = await brotliPromise // Import is async in browsers due to wasm requirements!
+```javascript
+import brotliPromise from 'brotli-wasm'; // Import the default export
 
-const input = 'some input'
+const brotli = await brotliPromise; // Import is async in browsers due to wasm requirements!
+
+const input = 'some input';
 
 const inputStream = new ReadableStream({
-  start (controller) {
-	controller.enqueue(input)
-	controller.close()
-  }
-})
-const textEncoderStream = new TextEncoderStream()
-const compressStream = new brotli.CompressStream()
-const compressionStream = new TransformStream({
-  start () {},
-  transform (chunk, controller) {
-	controller.enqueue(compressStream.compress(chunk, 100))
-  },
-  flush (controller) {
-	if (compressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput) {
-	  controller.enqueue(compressStream.compress(undefined, 100))
-	}
-	controller.terminate()
-  }
-})
+    start (controller) {
+        controller.enqueue(input);
+        controller.close();
+    }
+});
 
-const decompressStream = new brotli.DecompressStream()
+const textEncoderStream = new TextEncoderStream();
+const compressStream = new brotli.CompressStream();
+const compressionStream = new TransformStream({
+    start () {},
+    transform (chunk, controller) {
+        controller.enqueue(compressStream.compress(chunk, 100));
+    },
+    flush (controller) {
+        if (compressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput) {
+            controller.enqueue(compressStream.compress(undefined, 100));
+        }
+        controller.terminate();
+    }
+});
+
+const decompressStream = new brotli.DecompressStream();
 const decompressionStream = new TransformStream({
-  start () {},
-  transform (chunk, controller) {
-	controller.enqueue(decompressStream.decompress(chunk, 100))
-  },
-  flush (controller) {
-	if (decompressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput) {
-	  controller.enqueue(decompressStream.decompress(undefined, 100))
-	}
-	controller.terminate()
-  }
-})
+    start () {},
+    transform (chunk, controller) {
+        controller.enqueue(decompressStream.decompress(chunk, 100));
+    },
+    flush (controller) {
+        if (decompressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput) {
+            controller.enqueue(decompressStream.decompress(undefined, 100));
+        }
+        controller.terminate();
+    }
+});
+
 const textDecoderStream = new TextDecoderStream()
 const outputStream = new WritableStream({
-  write (chunk) {
-	output += chunk
-  }
-})
+    write (chunk) {
+        output += chunk;
+    }
+});
 
-let output = ''
+let output = '';
 await inputStream
-  .pipeThrough(textEncoderStream)
-  .pipeThrough(compressionStream)
-  .pipeThrough(decompressionStream)
-  .pipeThrough(textDecoderStream)
-  .pipeTo(outputStream)
-console.log(output) // Prints 'some input'
+    .pipeThrough(textEncoderStream)
+    .pipeThrough(compressionStream)
+    .pipeThrough(decompressionStream)
+    .pipeThrough(textDecoderStream)
+    .pipeTo(outputStream);
+console.log(output); // Prints 'some input'
 ```
 
 Note that `TransformStream` has become available in all browsers as of mid-2022. https://caniuse.com/mdn-api_transformstream
