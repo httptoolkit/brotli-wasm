@@ -60,6 +60,20 @@ describe("Brotli-wasm", () => {
         expect(textDecoder.decode(result)).to.equal('Brotli brotli brotli brotli');
     });
 
+    it("can compress and decompress data many times", function () {
+        this.timeout(10000); // Should only take 2-4 seconds, but leave some slack
+
+        const input = textEncoder.encode("Test input data");
+
+        for (let i = 0; i < 500; i++) {
+            const compressed = brotli.compress(input);
+            expect(dataToBase64(compressed)).to.equal('Gw4A+KWpyubolCCjVAjmxJ4D');
+
+            const decompressed = brotli.decompress(compressed);
+            expect(textDecoder.decode(decompressed)).to.equal('Test input data');
+        }
+    });
+
     it("cleanly fails when options is something other than an object", () => {
         const input = textEncoder.encode("Test input data");
         expect(() =>
