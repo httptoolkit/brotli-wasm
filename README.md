@@ -54,7 +54,7 @@ const textDecoder = new TextDecoder();
 
 const input = 'some input';
 
-const uncompressedData = textEncoder.encode('some input');
+const uncompressedData = textEncoder.encode(input);
 const compressedData = brotli.compress(uncompressedData);
 const decompressedData = brotli.decompress(compressedData);
 
