@@ -277,6 +277,78 @@ describe("Brotli-wasm", () => {
         expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
         expect(textDecoder.decode(new Uint8Array([...output1, ...output2]))).to.equal('Brotli brotli brotli brotli');
     });
+
+    const areStreamsAvailable = !!globalThis.TransformStream;
+
+    it("can streamingly compress & decompress back to the original result with web streams", async function () {
+        if (!areStreamsAvailable) return this.skip();
+
+        // This is very similar to the streaming example in the README, but with reduced buffer sizes to
+        // try and ensure it catches any issues:
+
+        let input = "";
+        for (let i = 0; i < 1000; i++) {
+            input += `${i}: Brotli brotli brotli brotli `;
+        }
+
+        const inputStream = new ReadableStream({
+            start(controller) {
+                controller.enqueue(input);
+                controller.close();
+            }
+        });
+
+        const textEncoderStream = new TextEncoderStream();
+
+        const compressStream = new brotli.CompressStream();
+        const compressionStream = new TransformStream({
+            start() { },
+            transform(chunk, controller) {
+                controller.enqueue(compressStream.compress(chunk, 10));
+            },
+            flush(controller) {
+                while (
+                    compressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput ||
+                    compressStream.result() === brotli.BrotliStreamResult.NeedsMoreOutput
+                ) {
+                    controller.enqueue(compressStream.compress(undefined, 10));
+                }
+                controller.terminate();
+            }
+        });
+
+        const decompressStream = new brotli.DecompressStream();
+        const decompressionStream = new TransformStream({
+            start() { },
+            transform(chunk, controller) {
+                controller.enqueue(decompressStream.decompress(chunk, 100));
+            },
+            flush(controller) {
+                while (decompressStream.result() === brotli.BrotliStreamResult.NeedsMoreOutput) {
+                    controller.enqueue(decompressStream.decompress(new Uint8Array(0), 100));
+                }
+                controller.terminate();
+            }
+        });
+
+        const textDecoderStream = new TextDecoderStream();
+
+        let output = '';
+        const outputStream = new WritableStream({
+            write(chunk) {
+                output += chunk;
+            }
+        });
+
+        await inputStream
+            .pipeThrough(textEncoderStream)
+            .pipeThrough(compressionStream)
+            .pipeThrough(decompressionStream)
+            .pipeThrough(textDecoderStream)
+            .pipeTo(outputStream);
+
+        expect(output).to.equal(input);
+  });
 });
 
 function generateRandomBytes(size: number) {

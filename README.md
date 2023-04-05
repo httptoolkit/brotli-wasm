@@ -77,23 +77,32 @@ const brotli = await brotliPromise; // Import is async in browsers due to wasm r
 
 const input = 'some input';
 
+// Get a stream for your input:
 const inputStream = new ReadableStream({
-    start (controller) {
+    start(controller) {
         controller.enqueue(input);
         controller.close();
     }
 });
 
+// Convert the streaming data to Uint8Arrays, if necessary:
 const textEncoderStream = new TextEncoderStream();
+
+// Create a stream to incrementally compress the data as it streams:
 const compressStream = new brotli.CompressStream();
 const compressionStream = new TransformStream({
-    start () {},
-    transform (chunk, controller) {
-        controller.enqueue(compressStream.compress(chunk, 100));
+    start() { },
+    transform(chunk, controller) {
+        // Compress data, producing 1024 bytes of output at a time (i.e. limiting the output):
+        controller.enqueue(compressStream.compress(chunk, 1024));
     },
-    flush (controller) {
-        if (compressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput) {
-            controller.enqueue(compressStream.compress(undefined, 100));
+    flush(controller) {
+        // Stream remaining compressed data after input finishes, 1024 bytes of output at a time:
+        while (
+            compressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput ||
+            compressStream.result() === brotli.BrotliStreamResult.NeedsMoreOutput
+        ) {
+            controller.enqueue(compressStream.compress(undefined, 1024));
         }
         controller.terminate();
     }
@@ -101,26 +110,29 @@ const compressionStream = new TransformStream({
 
 const decompressStream = new brotli.DecompressStream();
 const decompressionStream = new TransformStream({
-    start () {},
-    transform (chunk, controller) {
-        controller.enqueue(decompressStream.decompress(chunk, 100));
+    start() { },
+    transform(chunk, controller) {
+        // Decompress, producing 1024 bytes of output at a time:
+        controller.enqueue(decompressStream.decompress(chunk, 1024));
     },
-    flush (controller) {
-        if (decompressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput) {
-            controller.enqueue(decompressStream.decompress(undefined, 100));
+    flush(controller) {
+        // Decompress all remaining output after input finishes, 1024 bytes at a time:
+        while (decompressStream.result() === brotli.BrotliStreamResult.NeedsMoreOutput) {
+            controller.enqueue(decompressStream.decompress(new Uint8Array(0), 1024));
         }
         controller.terminate();
     }
 });
 
-const textDecoderStream = new TextDecoderStream()
+const textDecoderStream = new TextDecoderStream();
+
+let output = '';
 const outputStream = new WritableStream({
-    write (chunk) {
+    write(chunk) {
         output += chunk;
     }
 });
 
-let output = '';
 await inputStream
     .pipeThrough(textEncoderStream)
     .pipeThrough(compressionStream)
@@ -130,7 +142,9 @@ await inputStream
 console.log(output); // Prints 'some input'
 ```
 
-Note that `TransformStream` has become available in all browsers as of mid-2022. https://caniuse.com/mdn-api_transformstream
+Note that `TransformStream` has become available in all browsers as of mid-2022: https://caniuse.com/mdn-api_transformstream. It's also been available in Node.js (experimentally) since v16.5.0.
+
+This is a simplified demo example - you may well want to tweak the specific stream buffer sizes for compression/decompression to your use case, to reuse buffers, or explore further optimizations if you're interested in these streaming use cases.
 
 ## Alternatives
 
