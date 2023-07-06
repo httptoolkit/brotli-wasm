@@ -121,12 +121,15 @@ describe("Brotli-wasm", () => {
         const input1 = input.slice(0, input.length / 2);
         const input2 = input.slice(input.length / 2);
         const stream = new brotli.CompressStream();
-        const output1 = stream.compress(input1, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const output2 = stream.compress(input2, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const output3 = stream.compress(undefined, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const result1 = stream.compress(input1, 100);
+        const output1 = result1.buf;
+        expect(result1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const result2 = stream.compress(input2, 100);
+        const output2 = result2.buf;
+        expect(result2.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const result3 = stream.compress(undefined, 100);
+        const output3 = result3.buf;
+        expect(result3.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         expect(dataToBase64([...output1, ...output2, ...output3])).to.equal('Gw4A+KWpyubolCCjVAjmxJ4D');
     });
 
@@ -136,12 +139,15 @@ describe("Brotli-wasm", () => {
         const input2 = input.slice(input.length / 2);
         const quality = 1;
         const stream = new brotli.CompressStream(quality);
-        const output1 = stream.compress(input1, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const output2 = stream.compress(input2, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const output3 = stream.compress(undefined, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const result1 = stream.compress(input1, 100);
+        const output1 = result1.buf;
+        expect(result1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const result2 = stream.compress(input2, 100);
+        const output2 = result2.buf;
+        expect(result2.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const result3 = stream.compress(undefined, 100);
+        const output3 = result3.buf;
+        expect(result3.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         // It will be different from non-streaming result.
         // But it can still be decompressed back to the original string.
         let output = new Uint8Array([...output1, ...output2, ...output3]);
@@ -154,10 +160,12 @@ describe("Brotli-wasm", () => {
         const input1 = input.slice(0, input.length / 2);
         const input2 = input.slice(input.length / 2);
         const stream = new brotli.DecompressStream();
-        const output1 = stream.decompress(input1, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const output2 = stream.decompress(input2, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const result1 = stream.decompress(input1, 100);
+        const output1 = result1.buf;
+        expect(result1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const result2 = stream.decompress(input2, 100);
+        const output2 = result2.buf;
+        expect(result2.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         expect(textDecoder.decode(new Uint8Array([...output1, ...output2]))).to.equal('Brotli brotli brotli brotli');
     });
 
@@ -167,12 +175,15 @@ describe("Brotli-wasm", () => {
         const input2 = input.slice(input.length / 2);
         const quality = 12;
         const stream = new brotli.CompressStream(quality);
-        const output1 = stream.compress(input1, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const output2 = stream.compress(input2, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const output3 = stream.compress(undefined, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const result1 = stream.compress(input1, 100);
+        const output1 = result1.buf;
+        expect(result1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const result2 = stream.compress(input2, 100);
+        const output2 = result2.buf;
+        expect(result2.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const result3 = stream.compress(undefined, 100);
+        const output3 = result3.buf;
+        expect(result3.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         expect(dataToBase64([...output1, ...output2, ...output3])).to.equal('Gw4A+KWpyubolCCjVAjmxJ4D');
     });
 
@@ -182,7 +193,6 @@ describe("Brotli-wasm", () => {
         expect(() =>
             stream.decompress(input, 100)
         ).to.throw('Brotli streaming decompress failed');
-        expect(stream.result()).to.lt(0);
     });
 
     it("can streamingly compress & decompress back to the original result", () => {
@@ -191,21 +201,26 @@ describe("Brotli-wasm", () => {
         const encInput1 = encInput.slice(0, encInput.length / 2);
         const encInput2 = encInput.slice(encInput.length / 2);
         const encStream = new brotli.CompressStream();
-        const encOutput1 = encStream.compress(encInput1, 100);
-        expect(encStream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const encOutput2 = encStream.compress(encInput2, 100);
-        expect(encStream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const encOutput3 = encStream.compress(undefined, 100);
-        expect(encStream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const encResult1 = encStream.compress(encInput1, 100);
+        const encOutput1 = encResult1.buf;
+        expect(encResult1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const encResult2 = encStream.compress(encInput2, 100);
+        const encOutput2 = encResult2.buf;
+        expect(encResult2.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const encResult3 = encStream.compress(undefined, 100);
+        const encOutput3 = encResult3.buf;
+        expect(encResult3.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         const encOutput = new Uint8Array([...encOutput1, ...encOutput2, ...encOutput3]);
 
         const decInput1 = encOutput.slice(0, encOutput.length / 2);
         const decInput2 = encOutput.slice(encOutput.length / 2);
         const decStream = new brotli.DecompressStream();
-        const decOutput1 = decStream.decompress(decInput1, 100);
-        expect(decStream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const decOutput2 = decStream.decompress(decInput2, 100);
-        expect(decStream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const decResult1 = decStream.decompress(decInput1, 100);
+        const decOutput1 = decResult1.buf;
+        expect(decResult1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const decResult2 = decStream.decompress(decInput2, 100);
+        const decOutput2 = decResult2.buf;
+        expect(decResult2.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         const decOutput = new Uint8Array([...decOutput1, ...decOutput2]);
 
         expect(textDecoder.decode(decOutput)).to.equal(s);
@@ -218,21 +233,26 @@ describe("Brotli-wasm", () => {
         const encInput2 = encInput.slice(encInput.length / 2);
         const quality = 3;
         const encStream = new brotli.CompressStream(quality);
-        const encOutput1 = encStream.compress(encInput1, 100);
-        expect(encStream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const encOutput2 = encStream.compress(encInput2, 100);
-        expect(encStream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const encOutput3 = encStream.compress(undefined, 100);
-        expect(encStream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const encResult1 = encStream.compress(encInput1, 100);
+        const encOutput1 = encResult1.buf;
+        expect(encResult1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const encResult2 = encStream.compress(encInput2, 100);
+        const encOutput2 = encResult2.buf;
+        expect(encResult2.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const encResult3 = encStream.compress(undefined, 100);
+        const encOutput3 = encResult3.buf;
+        expect(encResult3.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         const encOutput = new Uint8Array([...encOutput1, ...encOutput2, ...encOutput3]);
 
         const decInput1 = encOutput.slice(0, encOutput.length / 2);
         const decInput2 = encOutput.slice(encOutput.length / 2);
         const decStream = new brotli.DecompressStream();
-        const decOutput1 = decStream.decompress(decInput1, 100);
-        expect(decStream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const decOutput2 = decStream.decompress(decInput2, 100);
-        expect(decStream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const decResult1 = decStream.decompress(decInput1, 100);
+        const decOutput1 = decResult1.buf;
+        expect(decResult1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const decResult2 = decStream.decompress(decInput2, 100);
+        const decOutput2 = decResult2.buf;
+        expect(decResult2.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         const decOutput = new Uint8Array([...decOutput1, ...decOutput2]);
 
         expect(textDecoder.decode(decOutput)).to.equal(s);
@@ -244,12 +264,15 @@ describe("Brotli-wasm", () => {
         // to make the compressor ask for more output space when the action is PROCESS
         const input = generateRandomBytes(1600000);
         const stream = new brotli.CompressStream();
-        const output1 = stream.compress(input, 1);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreOutput);
-        const output2 = stream.compress(input.slice(stream.last_input_offset()), 1500000);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const output3 = stream.compress(undefined, 1640000);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const result1 = stream.compress(input, 1);
+        const output1 = result1.buf;
+        expect(result1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreOutput);
+        const result2 = stream.compress(input.slice(result1.input_offset), 1500000);
+        const output2 = result2.buf;
+        expect(result2.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const result3 = stream.compress(undefined, 1640000);
+        const output3 = result3.buf;
+        expect(result3.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         const output = new Uint8Array([...output1, ...output2, ...output3]);
 
         expect([...brotli.decompress(output)]).to.deep.equal([...input]);
@@ -258,12 +281,15 @@ describe("Brotli-wasm", () => {
     it("streaming compressing can handle needing more output when action is finish", () => {
         const input = textEncoder.encode('Some thrilling text I urgently need to compress');
         const stream = new brotli.CompressStream();
-        const output1 = stream.compress(input, 1);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreInput);
-        const output2 = stream.compress(undefined, 1);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreOutput);
-        const output3 = stream.compress(undefined, 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const result1 = stream.compress(input, 1);
+        const output1 = result1.buf;
+        expect(result1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const result2 = stream.compress(undefined, 1);
+        const output2 = result2.buf;
+        expect(result2.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreOutput);
+        const result3 = stream.compress(undefined, 100);
+        const output3 = result3.buf;
+        expect(result3.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         const output = new Uint8Array([...output1, ...output2, ...output3]);
         expect(dataToBase64(brotli.decompress(output))).to.equal(dataToBase64(input));
     });
@@ -271,10 +297,12 @@ describe("Brotli-wasm", () => {
     it("streaming decompressing can handle needing more output", () => {
         const input = base64ToData('GxoAABypU587dC0k9ianQOgqjS32iUTcCA==');
         const stream = new brotli.DecompressStream();
-        const output1 = stream.decompress(input, 1);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.NeedsMoreOutput);
-        const output2 = stream.decompress(input.slice(stream.last_input_offset()), 100);
-        expect(stream.result()).to.equal(brotli.BrotliStreamResult.ResultSuccess);
+        const result1 = stream.decompress(input, 1);
+        const output1 = result1.buf;
+        expect(result1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreOutput);
+        const result2 = stream.decompress(input.slice(result1.input_offset), 100);
+        const output2 = result2.buf;
+        expect(result2.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
         expect(textDecoder.decode(new Uint8Array([...output1, ...output2]))).to.equal('Brotli brotli brotli brotli');
     });
 
@@ -304,14 +332,28 @@ describe("Brotli-wasm", () => {
         const compressionStream = new TransformStream({
             start() { },
             transform(chunk, controller) {
-                controller.enqueue(compressStream.compress(chunk, 10));
+                let resultCode;
+                let inputOffset = 0;
+                do {
+                    const input = chunk.slice(inputOffset);
+                    const result = compressStream.compress(input, 10);
+                    controller.enqueue(result.buf);
+                    resultCode = result.code;
+                    inputOffset += result.input_offset;
+                } while (resultCode === brotli.BrotliStreamResultCode.NeedsMoreOutput);
+                if (resultCode !== brotli.BrotliStreamResultCode.NeedsMoreInput) {
+                    controller.error(`Brotli compression failed when transforming with code ${resultCode}`);
+                }
             },
             flush(controller) {
-                while (
-                    compressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput ||
-                    compressStream.result() === brotli.BrotliStreamResult.NeedsMoreOutput
-                ) {
-                    controller.enqueue(compressStream.compress(undefined, 10));
+                let resultCode;
+                do {
+                    const result = compressStream.compress(undefined, 10);
+                    controller.enqueue(result.buf);
+                    resultCode = result.code;
+                } while (resultCode === brotli.BrotliStreamResultCode.NeedsMoreOutput)
+                if (resultCode !== brotli.BrotliStreamResultCode.ResultSuccess) {
+                    controller.error(`Brotli compression failed when flushing with code ${resultCode}`);
                 }
                 controller.terminate();
             }
@@ -321,12 +363,23 @@ describe("Brotli-wasm", () => {
         const decompressionStream = new TransformStream({
             start() { },
             transform(chunk, controller) {
-                controller.enqueue(decompressStream.decompress(chunk, 100));
+                let resultCode;
+                let inputOffset = 0;
+                do {
+                    const input = chunk.slice(inputOffset);
+                    const result = decompressStream.decompress(input, 100);
+                    controller.enqueue(result.buf);
+                    resultCode = result.code;
+                    inputOffset += result.input_offset;
+                } while (resultCode === brotli.BrotliStreamResultCode.NeedsMoreOutput);
+                if (
+                    resultCode !== brotli.BrotliStreamResultCode.NeedsMoreInput &&
+                    resultCode !== brotli.BrotliStreamResultCode.ResultSuccess
+                ) {
+                  controller.error(`Brotli decompression failed with code ${resultCode}`)
+                }
             },
             flush(controller) {
-                while (decompressStream.result() === brotli.BrotliStreamResult.NeedsMoreOutput) {
-                    controller.enqueue(decompressStream.decompress(new Uint8Array(0), 100));
-                }
                 controller.terminate();
             }
         });
