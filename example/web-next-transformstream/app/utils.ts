@@ -18,23 +18,28 @@ const brotliCompressTransformerBuilder: (
   stream: new brotliWasm.CompressStream(quality),
   start() {},
   transform(chunk, controller) {
+    let resultCode
+    let inputOffset = 0
     do {
-      const inputOffset = this.stream.last_input_offset()
       const input = chunk.slice(inputOffset)
-      const output = this.stream.compress(input, this.outputSize)
-      controller.enqueue(output)
-    } while (this.stream.result() === brotliWasm.BrotliStreamResult.NeedsMoreOutput)
-    if (this.stream.result() !== brotliWasm.BrotliStreamResult.NeedsMoreInput) {
-      controller.error(`Brotli compression failed when transforming with error code ${this.stream.result()}`)
+      const result = this.stream.compress(input, this.outputSize)
+      controller.enqueue(result.buf)
+      resultCode = result.code
+      inputOffset += result.input_offset
+    } while (resultCode === brotliWasm.BrotliStreamResultCode.NeedsMoreOutput)
+    if (resultCode !== brotliWasm.BrotliStreamResultCode.NeedsMoreInput) {
+      controller.error(`Brotli compression failed when transforming with code ${resultCode}`)
     }
   },
   flush(controller) {
+    let resultCode
     do {
-      const output = this.stream.compress(undefined, this.outputSize)
-      controller.enqueue(output)
-    } while (this.stream.result() === brotliWasm.BrotliStreamResult.NeedsMoreOutput)
-    if (this.stream.result() !== brotliWasm.BrotliStreamResult.ResultSuccess) {
-      controller.error(`Brotli compression failed when flushing with error code ${this.stream.result()}`)
+      const result = this.stream.compress(undefined, this.outputSize)
+      controller.enqueue(result.buf)
+      resultCode = result.code
+    } while (resultCode === brotliWasm.BrotliStreamResultCode.NeedsMoreOutput)
+    if (resultCode !== brotliWasm.BrotliStreamResultCode.ResultSuccess) {
+      controller.error(`Brotli compression failed when flushing with code ${resultCode}`)
     }
   },
 })
