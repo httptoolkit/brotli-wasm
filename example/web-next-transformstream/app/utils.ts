@@ -65,17 +65,20 @@ const brotliDecompressTransformerBuilder: (
   stream: new brotliWasm.DecompressStream(),
   start() {},
   transform(chunk, controller) {
+    let resultCode
+    let inputOffset = 0
     do {
-      const inputOffset = this.stream.last_input_offset()
       const input = chunk.slice(inputOffset)
-      const output = this.stream.decompress(input, this.outputSize)
-      controller.enqueue(output)
-    } while (this.stream.result() === brotliWasm.BrotliStreamResult.NeedsMoreOutput)
+      const result = this.stream.decompress(input, this.outputSize)
+      controller.enqueue(result.buf)
+      resultCode = result.code
+      inputOffset += result.input_offset
+    } while (resultCode === brotliWasm.BrotliStreamResultCode.NeedsMoreOutput)
     if (
-      this.stream.result() !== brotliWasm.BrotliStreamResult.NeedsMoreInput &&
-      this.stream.result() !== brotliWasm.BrotliStreamResult.ResultSuccess
+      resultCode !== brotliWasm.BrotliStreamResultCode.NeedsMoreInput &&
+      resultCode !== brotliWasm.BrotliStreamResultCode.ResultSuccess
     ) {
-      controller.error(`Brotli decompression failed when transforming with error code ${this.stream.result()}`)
+      controller.error(`Brotli decompression failed with code ${resultCode}`)
     }
   },
   // Brotli decompression does not need flushing
