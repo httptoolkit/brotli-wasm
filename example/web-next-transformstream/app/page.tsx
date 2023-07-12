@@ -2,26 +2,32 @@
 
 import streamSaver from 'streamsaver'
 
-import { BrotliCompressTransformStream } from './utils'
+import { BrotliCompressTransformStream, BrotliDecompressTransformStream } from './utils'
 
 export default function Home() {
   const brotli = (op: string) => async () => {
     const brotliWasm = await (await import('brotli-wasm')).default
+    const fileInput = document.querySelector('#file-input') as HTMLInputElement
+    const file = fileInput.files![0]
+    if (!file) throw new Error('No file selected')
+    const inputStream = file.stream()
+    let transformStream = null
+    let outputFilename = null
     switch (op) {
       case 'enc':
-        const fileInput = document.querySelector('#file-input') as HTMLInputElement
-        const file = fileInput.files![0]
-        if (!file) throw new Error('No file selected')
-        const inputStream = file.stream()
-        const outputStream = streamSaver.createWriteStream(file.name + '.br')
         // 1KB chunks
-        const transformStream = new BrotliCompressTransformStream(brotliWasm, 1024)
-        inputStream.pipeThrough(transformStream).pipeTo(outputStream)
+        transformStream = new BrotliCompressTransformStream(brotliWasm, 1024)
+        outputFilename = file.name + '.br'
         break
       case 'dec':
-        console.error('Not implemented')
+        transformStream = new BrotliDecompressTransformStream(brotliWasm, 1024)
+        outputFilename = file.name.match(/\.br$/) ? file.name.slice(0, -3) : file.name + '.debr'
         break
+      default:
+        throw new Error('Invalid operation')
     }
+    const outputStream = streamSaver.createWriteStream(outputFilename)
+    inputStream.pipeThrough(transformStream).pipeTo(outputStream)
   }
 
   return (
@@ -33,9 +39,7 @@ export default function Home() {
           <button onClick={brotli('enc')}>Compress</button>
         </div>
         <div>
-          <button disabled onClick={brotli('dec')}>
-            Decompress
-          </button>
+          <button onClick={brotli('dec')}>Decompress</button>
         </div>
       </div>
     </main>
