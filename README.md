@@ -88,21 +88,41 @@ const inputStream = new ReadableStream({
 // Convert the streaming data to Uint8Arrays, if necessary:
 const textEncoderStream = new TextEncoderStream();
 
+// You can use whatever stream chunking size you like here, depending on your use case:
+const OUTPUT_SIZE = 100;
+
 // Create a stream to incrementally compress the data as it streams:
 const compressStream = new brotli.CompressStream();
 const compressionStream = new TransformStream({
-    start() { },
     transform(chunk, controller) {
-        // Compress data, producing 1024 bytes of output at a time (i.e. limiting the output):
-        controller.enqueue(compressStream.compress(chunk, 1024));
+        let resultCode;
+        let inputOffset = 0;
+
+        // Compress this chunk, producing up to OUTPUT_SIZE output bytes at a time, until the
+        // entire input has been compressed.
+
+        do {
+            const input = chunk.slice(inputOffset);
+            const result = compressStream.compress(input, OUTPUT_SIZE);
+            controller.enqueue(result.buf);
+            resultCode = result.code;
+            inputOffset += result.input_offset;
+        } while (resultCode === brotli.BrotliStreamResultCode.NeedsMoreOutput);
+        if (resultCode !== brotli.BrotliStreamResultCode.NeedsMoreInput) {
+            controller.error(`Brotli compression failed when transforming with code ${resultCode}`);
+        }
     },
     flush(controller) {
-        // Stream remaining compressed data after input finishes, 1024 bytes of output at a time:
-        while (
-            compressStream.result() === brotli.BrotliStreamResult.NeedsMoreInput ||
-            compressStream.result() === brotli.BrotliStreamResult.NeedsMoreOutput
-        ) {
-            controller.enqueue(compressStream.compress(undefined, 1024));
+        // Once the chunks are finished, flush any remaining data (again in repeated fixed-output
+        // chunks) to finish the stream:
+        let resultCode;
+        do {
+            const result = compressStream.compress(undefined, OUTPUT_SIZE);
+            controller.enqueue(result.buf);
+            resultCode = result.code;
+        } while (resultCode === brotli.BrotliStreamResultCode.NeedsMoreOutput)
+        if (resultCode !== brotli.BrotliStreamResultCode.ResultSuccess) {
+            controller.error(`Brotli compression failed when flushing with code ${resultCode}`);
         }
         controller.terminate();
     }
@@ -110,16 +130,28 @@ const compressionStream = new TransformStream({
 
 const decompressStream = new brotli.DecompressStream();
 const decompressionStream = new TransformStream({
-    start() { },
     transform(chunk, controller) {
-        // Decompress, producing 1024 bytes of output at a time:
-        controller.enqueue(decompressStream.decompress(chunk, 1024));
+        let resultCode;
+        let inputOffset = 0;
+
+        // Decompress this chunk, producing up to OUTPUT_SIZE output bytes at a time, until the
+        // entire input has been decompressed.
+
+        do {
+            const input = chunk.slice(inputOffset);
+            const result = decompressStream.decompress(input, OUTPUT_SIZE);
+            controller.enqueue(result.buf);
+            resultCode = result.code;
+            inputOffset += result.input_offset;
+        } while (resultCode === brotli.BrotliStreamResultCode.NeedsMoreOutput);
+        if (
+            resultCode !== brotli.BrotliStreamResultCode.NeedsMoreInput &&
+            resultCode !== brotli.BrotliStreamResultCode.ResultSuccess
+        ) {
+            controller.error(`Brotli decompression failed with code ${resultCode}`)
+        }
     },
     flush(controller) {
-        // Decompress all remaining output after input finishes, 1024 bytes at a time:
-        while (decompressStream.result() === brotli.BrotliStreamResult.NeedsMoreOutput) {
-            controller.enqueue(decompressStream.decompress(new Uint8Array(0), 1024));
-        }
         controller.terminate();
     }
 });

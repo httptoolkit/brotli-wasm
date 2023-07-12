@@ -330,7 +330,6 @@ describe("Brotli-wasm", () => {
 
         const compressStream = new brotli.CompressStream();
         const compressionStream = new TransformStream({
-            start() { },
             transform(chunk, controller) {
                 let resultCode;
                 let inputOffset = 0;
@@ -361,7 +360,6 @@ describe("Brotli-wasm", () => {
 
         const decompressStream = new brotli.DecompressStream();
         const decompressionStream = new TransformStream({
-            start() { },
             transform(chunk, controller) {
                 let resultCode;
                 let inputOffset = 0;
