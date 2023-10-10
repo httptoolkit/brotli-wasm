@@ -7,6 +7,7 @@
   "browser": "./index.browser.js",
   "exports": {
     ".": {
+      "types": "./index.d.ts",
       "import": "./index.web.js",
       "browser": "./index.browser.js",
       "require": "./index.node.js",
