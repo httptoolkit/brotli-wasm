@@ -1,8 +1,7 @@
 use crate::set_panic_hook;
 use brotli::enc::encode::{
-    BrotliEncoderCompressStream, BrotliEncoderCreateInstance, BrotliEncoderDestroyInstance,
-    BrotliEncoderIsFinished, BrotliEncoderOperation, BrotliEncoderParameter,
-    BrotliEncoderSetParameter, BrotliEncoderStateStruct,
+    BrotliEncoderDestroyInstance, BrotliEncoderOperation, BrotliEncoderParameter,
+    BrotliEncoderStateStruct,
 };
 use brotli::enc::StandardAlloc; // Re-exported from alloc_stdlib::StandardAlloc
 use brotli::{self, BrotliDecompressStream, BrotliResult, BrotliState};
@@ -58,15 +57,11 @@ impl CompressStream {
     pub fn new(quality: Option<u32>) -> CompressStream {
         set_panic_hook();
         let alloc = StandardAlloc::default();
-        let mut state = BrotliEncoderCreateInstance(alloc);
+        let mut state = BrotliEncoderStateStruct::new(alloc);
         match quality {
             None => (),
             Some(quality) => {
-                BrotliEncoderSetParameter(
-                    &mut state,
-                    BrotliEncoderParameter::BROTLI_PARAM_QUALITY,
-                    quality,
-                );
+                state.set_parameter(BrotliEncoderParameter::BROTLI_PARAM_QUALITY, quality);
             }
         }
         Self {
@@ -97,8 +92,7 @@ impl CompressStream {
                 // `BrotliEncoderCompressStream` does not return a `BrotliResult` but returns a boolean,
                 // which is different from `BrotliDecompressStream`.
                 // But the requirement for input/output buf is common so we reused `BrotliStreamResult` to report it.
-                let ret = BrotliEncoderCompressStream(
-                    &mut self.state,
+                if self.state.compress_stream(
                     op,
                     &mut available_in,
                     &input,
@@ -108,8 +102,7 @@ impl CompressStream {
                     &mut output_offset,
                     &mut Some(self.total_out),
                     &mut nop_callback,
-                );
-                if ret != 0 {
+                ) {
                     if available_in == 0 {
                         output.truncate(output_offset);
                         Ok(BrotliStreamResult {
@@ -136,9 +129,8 @@ impl CompressStream {
                 let op = BrotliEncoderOperation::BROTLI_OPERATION_FINISH;
                 let input = Vec::new().into_boxed_slice();
                 let mut available_in = 0;
-                while BrotliEncoderIsFinished(&mut self.state) == 0 && available_out > 0 {
-                    let ret = BrotliEncoderCompressStream(
-                        &mut self.state,
+                while !self.state.is_finished() && available_out > 0 {
+                    if !self.state.compress_stream(
                         op,
                         &mut available_in,
                         &input,
@@ -148,8 +140,7 @@ impl CompressStream {
                         &mut output_offset,
                         &mut Some(self.total_out),
                         &mut nop_callback,
-                    );
-                    if ret == 0 {
+                    ) {
                         return Err(JsError::new(
                             "Brotli streaming compress failed: When finishing",
                         ));
