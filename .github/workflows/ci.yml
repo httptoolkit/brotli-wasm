@@ -20,5 +20,5 @@ jobs:
         with:
           toolchain: stable
 
-      - run: npm install --no-package-lock
+      - run: npm ci
       - run: npm test
