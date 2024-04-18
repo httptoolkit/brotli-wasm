@@ -50,6 +50,9 @@
     "url": "https://github.com/httptoolkit/brotli-wasm/issues"
   },
   "homepage": "https://github.com/httptoolkit/brotli-wasm#readme",
+  "engines": {
+    "node": ">=v18.0.0"
+  },
   "devDependencies": {
     "@peculiar/webcrypto": "^1.4.0",
     "@types/atob": "^2.1.2",
