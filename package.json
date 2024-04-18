@@ -1,6 +1,6 @@
 {
   "name": "brotli-wasm",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "A reliable compressor and decompressor for Brotli, supporting node & browsers via wasm",
   "types": "./index.d.ts",
   "main": "./index.node.js",
