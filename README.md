@@ -70,7 +70,7 @@ The package itself has no runtime dependencies, although if you prefer using `Bu
 
 ##### Using an importmap
 
-If you've installed `brotli-wasm` as an NPM package, you can load it from the `node_modules` folder:
+If you've installed `brotli-wasm` as an NPM package, you can load it from your `node_modules` subfolder:
 
 ```html
 <!-- index.html -->
@@ -81,7 +81,7 @@ If you've installed `brotli-wasm` as an NPM package, you can load it from the `n
         <script type="importmap">
             {
                 "imports": {
-                    "brotli-wasm": "./node_modules/brotli-wasm/index.web.js"
+                    "brotli-wasm": "/node_modules/brotli-wasm/index.web.js"
                 }
             }
         </script>
@@ -92,9 +92,10 @@ If you've installed `brotli-wasm` as an NPM package, you can load it from the `n
 
 ```javascript
 // main.js
+import brotliPromise from 'brotli-wasm';
 const brotli = await brotliPromise;
-const input = 'some input';
 
+const input = 'some input';
 const uncompressedData = new TextEncoder().encode(input);
 const compressedData = brotli.compress(uncompressedData);
 const decompressedData = brotli.decompress(compressedData);
