@@ -68,6 +68,39 @@ let brotli = await import("https://unpkg.com/brotli-wasm@1.3.1/index.web.js?modu
 
 The package itself has no runtime dependencies, although if you prefer using `Buffer` over using `TextEncoder/TextDecoder` you may want a [browser Buffer polyfill](https://www.npmjs.com/package/browserify-zlib).
 
+##### Using an importmap
+
+If you've installed `brotli-wasm` as an NPM package, you can load it from the `node_modules` folder:
+
+```html
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+    <head></head>
+    <body>
+        <script type="importmap">
+            {
+                "imports": {
+                    "brotli-wasm": "./node_modules/brotli-wasm/index.web.js"
+                }
+            }
+        </script>
+        <script type="module" src="/main.js"></script>
+    </body>
+</html>
+```
+
+```javascript
+// main.js
+const brotli = await brotliPromise;
+const input = 'some input';
+
+const uncompressedData = new TextEncoder().encode(input);
+const compressedData = brotli.compress(uncompressedData);
+const decompressedData = brotli.decompress(compressedData);
+console.log(new TextDecoder().decode(decompressedData)); // Prints 'some input'
+```
+
 #### In browser with streams:
 
 ```javascript
