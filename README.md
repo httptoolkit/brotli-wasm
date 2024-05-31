@@ -63,7 +63,7 @@ console.log(textDecoder.decode(decompressedData)); // Prints 'some input'
 
 You can also load it from a CDN like so:
 ```javascript
-let brotli = await import("https://unpkg.com/brotli-wasm@1.3.1/index.web.js?module").then(m => m.default);
+const brotli = await import("https://unpkg.com/brotli-wasm@3.0.0/index.web.js?module").then(m => m.default);
 ```
 
 The package itself has no runtime dependencies, although if you prefer using `Buffer` over using `TextEncoder/TextDecoder` you may want a [browser Buffer polyfill](https://www.npmjs.com/package/browserify-zlib).
