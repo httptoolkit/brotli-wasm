@@ -19,9 +19,9 @@
       "default": "./pkg.web/brotli_wasm.js"
     },
     "./web/bg.wasm": {
-      "types": "./pkg/brotli_wasm_bg.wasm.d.ts",
-      "import": "./pkg/brotli_wasm_bg.wasm",
-      "default": "./pkg/brotli_wasm_bg.wasm"
+      "types": "./pkg.web/brotli_wasm_bg.wasm.d.ts",
+      "import": "./pkg.web/brotli_wasm_bg.wasm",
+      "default": "./pkg.web/brotli_wasm_bg.wasm"
     }
   },
   "sideEffects": false,
