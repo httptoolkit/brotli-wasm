@@ -12,6 +12,24 @@
       "browser": "./index.browser.js",
       "require": "./index.node.js",
       "default": "./index.web.js"
+    },
+    "./wasm": {
+      "import": {
+        "types": "./pkg.web/brotli_wasm_bg.wasm.d.ts",
+        "default": "./pkg.web/brotli_wasm_bg.wasm"
+      },
+      "browser": {
+        "types": "./pkg.bundler/brotli_wasm_bg.wasm.d.ts",
+        "default": "./pkg.bundler/brotli_wasm_bg.wasm"
+      },
+      "require": {
+        "types": "./pkg.node/brotli_wasm_bg.wasm.d.ts",
+        "default": "./pkg.node/brotli_wasm_bg.wasm"
+      },
+      "default": {
+        "types": "./pkg.web/brotli_wasm_bg.wasm.d.ts",
+        "default": "./pkg.web/brotli_wasm_bg.wasm"
+      }
     }
   },
   "sideEffects": false,
