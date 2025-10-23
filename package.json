@@ -8,7 +8,10 @@
   "exports": {
     ".": {
       "types": "./index.d.ts",
-      "import": "./index.web.js",
+      "node": {
+        "import": "./index.node.mjs",
+        "require": "./index.node.js"
+      },
       "browser": "./index.browser.js",
       "require": "./index.node.js",
       "default": "./index.web.js"
@@ -17,9 +20,11 @@
   "sideEffects": false,
   "files": [
     "pkg.node",
+    "pkg.node.esm",
     "pkg.bundler",
     "pkg.web",
     "index.node.js",
+    "index.node.mjs",
     "index.browser.js",
     "index.web.js",
     "index.d.ts"
