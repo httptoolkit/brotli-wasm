@@ -18,7 +18,7 @@ lto = true
 opt-level = 's'
 
 [dependencies]
-wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wasm-bindgen = { version = "0.2.108", features = ["serde-serialize"] }
 brotli = "5.0"
 console_error_panic_hook = { version = "0.1", optional = true }
 serde = { version = "1.0", features = ["derive"] }
