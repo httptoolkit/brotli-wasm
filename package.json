@@ -74,7 +74,7 @@
     "karma-typescript": "^5.5.1",
     "karma-vite": "^1.0.1",
     "karma-webpack": "^5.0.0",
-    "mocha": "^8.4.0",
+    "mocha": "^11.7.5",
     "shelljs": "^0.8.4",
     "text-encoding": "^0.7.0",
     "ts-loader": "^9.2.1",
