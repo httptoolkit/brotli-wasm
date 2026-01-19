@@ -39,16 +39,19 @@ pub enum BrotliStreamResultCode {
     NeedsMoreOutput = 3,
 }
 
-#[wasm_bindgen]
-pub struct CompressStream {
-    state: BrotliEncoderStateStruct<StandardAlloc>,
-    total_out: usize,
+/// Wrapper around BrotliEncoderStateStruct that handles cleanup via Drop.
+struct BrotliEncoderState(BrotliEncoderStateStruct<StandardAlloc>);
+
+impl Drop for BrotliEncoderState {
+    fn drop(&mut self) {
+        BrotliEncoderDestroyInstance(&mut self.0);
+    }
 }
 
-impl Drop for CompressStream {
-    fn drop(&mut self) {
-        BrotliEncoderDestroyInstance(&mut self.state);
-    }
+#[wasm_bindgen]
+pub struct CompressStream {
+    state: Option<BrotliEncoderState>,
+    total_out: usize,
 }
 
 #[wasm_bindgen]
@@ -65,7 +68,7 @@ impl CompressStream {
             }
         }
         Self {
-            state,
+            state: Some(BrotliEncoderState(state)),
             total_out: 0,
         }
     }
@@ -75,6 +78,11 @@ impl CompressStream {
         input_opt: Option<Box<[u8]>>,
         output_size: usize,
     ) -> Result<BrotliStreamResult, JsError> {
+        let state = match self.state.as_mut() {
+            Some(s) => s,
+            None => return Err(JsError::new("CompressStream has already been freed")),
+        };
+
         let mut nop_callback = |_data: &mut brotli::interface::PredictionModeContextMap<
             brotli::interface::InputReferenceMut,
         >,
@@ -92,7 +100,7 @@ impl CompressStream {
                 // `BrotliEncoderCompressStream` does not return a `BrotliResult` but returns a boolean,
                 // which is different from `BrotliDecompressStream`.
                 // But the requirement for input/output buf is common so we reused `BrotliStreamResult` to report it.
-                if self.state.compress_stream(
+                if state.0.compress_stream(
                     op,
                     &mut available_in,
                     &input,
@@ -117,9 +125,13 @@ impl CompressStream {
                             input_offset,
                         })
                     } else {
+                        // Free WASM resources on error - stream is unusable after this
+                        self.state.take();
                         Err(JsError::new("Unexpected Brotli streaming compress: both available_in & available_out are not 0 after a successful processing"))
                     }
                 } else {
+                    // Free WASM resources on error - stream is unusable after this
+                    self.state.take();
                     Err(JsError::new(
                         "Brotli streaming compress failed: When processing",
                     ))
@@ -129,8 +141,8 @@ impl CompressStream {
                 let op = BrotliEncoderOperation::BROTLI_OPERATION_FINISH;
                 let input = Vec::new().into_boxed_slice();
                 let mut available_in = 0;
-                while !self.state.is_finished() && available_out > 0 {
-                    if !self.state.compress_stream(
+                while !state.0.is_finished() && available_out > 0 {
+                    if !state.0.compress_stream(
                         op,
                         &mut available_in,
                         &input,
@@ -141,6 +153,8 @@ impl CompressStream {
                         &mut Some(self.total_out),
                         &mut nop_callback,
                     ) {
+                        // Free WASM resources on error - stream is unusable after this
+                        self.state.take();
                         return Err(JsError::new(
                             "Brotli streaming compress failed: When finishing",
                         ));
@@ -171,7 +185,7 @@ impl CompressStream {
 
 #[wasm_bindgen]
 pub struct DecompressStream {
-    state: BrotliState<StandardAlloc, StandardAlloc, StandardAlloc>,
+    state: Option<BrotliState<StandardAlloc, StandardAlloc, StandardAlloc>>,
     total_out: usize,
 }
 
@@ -183,7 +197,7 @@ impl DecompressStream {
         set_panic_hook();
         let alloc = StandardAlloc::default();
         Self {
-            state: BrotliState::new(alloc, alloc, alloc),
+            state: Some(BrotliState::new(alloc, alloc, alloc)),
             total_out: 0,
         }
     }
@@ -193,6 +207,11 @@ impl DecompressStream {
         input: Box<[u8]>,
         output_size: usize,
     ) -> Result<BrotliStreamResult, JsError> {
+        let state = match self.state.as_mut() {
+            Some(s) => s,
+            None => return Err(JsError::new("DecompressStream has already been freed")),
+        };
+
         let mut output = vec![0; output_size];
         let mut available_in = input.len();
         let mut input_offset = 0;
@@ -206,11 +225,13 @@ impl DecompressStream {
             &mut output_offset,
             &mut output,
             &mut self.total_out,
-            &mut self.state,
+            state,
         ) {
             BrotliResult::ResultFailure => {
                 // It should be a negative error code
-                let err_code = self.state.error_code as i32;
+                let err_code = state.error_code as i32;
+                // Free WASM resources on error - stream is unusable after this
+                self.state.take();
                 Err(JsError::new(&format!(
                     "Brotli streaming decompress failed: Error code {}",
                     err_code

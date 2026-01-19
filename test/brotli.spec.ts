@@ -195,6 +195,24 @@ describe("Brotli-wasm", () => {
         ).to.throw('Brotli streaming decompress failed');
     });
 
+    it("automatically frees DecompressStream on error and prevents reuse", () => {
+        const input = textEncoder.encode("This is not brotli data, it's just a string");
+        const stream = new brotli.DecompressStream();
+
+        // This should throw and automatically free the stream's internal state
+        expect(() =>
+            stream.decompress(input, 100)
+        ).to.throw('Brotli streaming decompress failed');
+
+        // Attempting to use the stream again should fail with a clear message
+        expect(() =>
+            stream.decompress(input, 100)
+        ).to.throw('DecompressStream has already been freed');
+
+        // Calling free() should be safe (no-op since internal state is already freed)
+        expect(() => stream.free()).to.not.throw();
+    });
+
     it("can streamingly compress & decompress back to the original result", () => {
         const s = "Some thrilling text I urgently need to compress";
         const encInput = textEncoder.encode(s);
