@@ -515,6 +515,136 @@ describe("Brotli-wasm custom dictionaries", () => {
     });
 });
 
+// Regression coverage for the custom-dictionary encoder panic fixed in brotli 8.0.4
+// (vendored patch). See brotli_bugfix.md: a backward reference straddling the custom-
+// dictionary boundary was truncated below brotli's minimum copy length (2), yielding an
+// invalid command whose copy length code underflowed to 65535 (panic). These tests pin the
+// fixed behaviour so any regression fails loudly instead of crashing.
+describe("Brotli-wasm custom dictionary panic regression", () => {
+
+    let brotli: BrotliWasmType;
+    beforeEach(async () => {
+        brotli = await brotliPromise;
+    });
+
+    // Minimized from fuzzing. The trailing space in the dictionary is load-bearing: it is
+    // what makes a dictionary-region match straddle the dictionary boundary.
+    const MIN_PAYLOAD = textEncoder.encode('42ringbaznumberbar 42ba');
+    const MIN_DICT = textEncoder.encode('ingr boolean ');
+
+    it("does not panic on the minimized input at any quality (q0-q11)", () => {
+        for (const q of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) {
+            const compressed = brotli.compress(MIN_PAYLOAD, { quality: q, customDictionary: MIN_DICT });
+            const decompressed = brotli.decompress(compressed, { customDictionary: MIN_DICT });
+            expect([...decompressed]).to.deep.equal([...MIN_PAYLOAD]);
+        }
+    });
+
+    it("does not panic on the minimized input in the q5-q9 meta-block range", () => {
+        // Directly targets the `BrotliBuildMetaBlock` / `CreateBackwardReferences` path
+        // that prepends the custom dictionary to the ring buffer.
+        for (const q of [5, 6, 7, 8, 9]) {
+            const compressed = brotli.compress(MIN_PAYLOAD, { quality: q, customDictionary: MIN_DICT });
+            expect([...brotli.decompress(compressed, { customDictionary: MIN_DICT })])
+                .to.deep.equal([...MIN_PAYLOAD]);
+        }
+    });
+
+    // Deterministic xorshift32 PRNG (no dependencies) so any failure is reproducible.
+    function makeRng(seed: number): () => number {
+        let s = seed >>> 0;
+        return () => {
+            s ^= s << 13; s >>>= 0;
+            s ^= s >>> 17;
+            s ^= s << 5; s >>>= 0;
+            return s;
+        };
+    }
+    function randBytes(rng: () => number, n: number, alphabet: Uint8Array): Uint8Array {
+        const out = new Uint8Array(n);
+        for (let i = 0; i < n; i++) out[i] = alphabet[rng() % alphabet.length];
+        return out;
+    }
+
+    it("round-trips many dictionary payloads at q5-q9 (deterministic fuzz)", function () {
+        this.timeout(30000); // q9 over many payloads is heavier; leave slack
+        const rng = makeRng(0x1234abcd);
+        // Shared alphabet so backward references frequently straddle the dictionary boundary.
+        const alphabet = textEncoder.encode('abcde 0123XYZingr boolean numberbar bazring');
+        for (let i = 0; i < 25; i++) {
+            const dict = randBytes(rng, 1 + rng() % 300, alphabet);
+            const payload = randBytes(rng, 1 + rng() % 1200, alphabet);
+            for (const q of [5, 6, 7, 8, 9]) {
+                const compressed = brotli.compress(payload, { quality: q, customDictionary: dict });
+                expect([...brotli.decompress(compressed, { customDictionary: dict })])
+                    .to.deep.equal([...payload]);
+            }
+        }
+    });
+
+    it("streaming compress with a dictionary at q7 round-trips", () => {
+        const stream = new brotli.CompressStream(7, MIN_DICT);
+        const r1 = stream.compress(MIN_PAYLOAD, 4096);
+        expect(r1.code).to.equal(brotli.BrotliStreamResultCode.NeedsMoreInput);
+        const r2 = stream.compress(undefined, 4096);
+        expect(r2.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
+        const compressed = new Uint8Array([...r1.buf, ...r2.buf]);
+        expect([...brotli.decompress(compressed, { customDictionary: MIN_DICT })])
+            .to.deep.equal([...MIN_PAYLOAD]);
+    });
+
+    // Ground-truth cross-check (Node only): the fix must not change standard (no-dictionary)
+    // brotli output, which Node's zlib must still be able to decode. (Node zlib does not expose
+    // brotli dictionaries, so the dictionary path itself is validated by the round-trips above
+    // and the native Rust harness in tests/.)
+    const isNode = typeof process !== 'undefined' && !!process.versions.node;
+    it("no-dictionary output is decodable by Node zlib (ground truth)", function () {
+        if (!isNode) return this.skip();
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const zlib = require('zlib');
+        const payload = textEncoder.encode(
+            'Some thrilling text I urgently need to compress, repeated for size. '.repeat(10)
+        );
+        for (const q of [5, 7, 9, 11]) {
+            const compressed = brotli.compress(payload, { quality: q });
+            const decoded = zlib.brotliDecompressSync(compressed);
+            expect([...decoded]).to.deep.equal([...payload]);
+        }
+    });
+});
+
+// Verifies the node wrapper's trap-recovery hardening: a WASM trap must not permanently
+// poison the process. The original bug that caused the trap is fixed, so this locks in that
+// the recovery mechanism (reinit() — which is the exact code path the wrapper runs
+// automatically after catching a trap) keeps producing a healthy instance.
+describe("Brotli-wasm instance recovery (poisoning hardening)", () => {
+
+    let brotli: BrotliWasmType;
+    beforeEach(async () => {
+        brotli = await brotliPromise;
+    });
+
+    const isNode = typeof process !== 'undefined' && !!process.versions.node;
+
+    it("exposes reinit() and stays functional across re-initializations", function () {
+        // web/browser bundles are async and recover by re-awaiting init() / re-importing.
+        if (!isNode) return this.skip();
+        const nodeBrotli = brotli as unknown as { reinit?: () => void };
+        expect(nodeBrotli.reinit).to.be.a('function');
+
+        const input = textEncoder.encode("Test input data");
+        // Deterministic q11 output is stable across fresh WebAssembly instances:
+        const before = dataToBase64(brotli.compress(input));
+        // reinit() swaps in a brand-new instance — the same loadFresh() the wrapper calls
+        // automatically after catching a trap. Repeating it several times proves the process
+        // is not poisoned (each subsequent call works and stays byte-identical).
+        for (let i = 0; i < 3; i++) {
+            nodeBrotli.reinit!();
+            expect(dataToBase64(brotli.compress(input))).to.equal(before);
+        }
+    });
+});
+
 function generateRandomBytes(size: number) {
     const resultArray = new Uint8Array(size);
     let generatedSize = 0;

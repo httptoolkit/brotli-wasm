@@ -2,7 +2,7 @@
 
 > _Fork of [httptoolkit/brotli-wasm](https://github.com/httptoolkit/brotli-wasm), published as
 > [`@kyr0/brotli-wasm`](https://npmjs.com/package/@kyr0/brotli-wasm), adding custom dictionary
-> support for compression & decompression (one-shot and streaming)._
+> support for compression & decompression (one-shot and streaming) and vendoring the Brotli crate to fix several issues, including issues with custom dictionaries._
 
 **A reliable compressor and decompressor for Brotli, supporting node & browsers via wasm**
 
@@ -50,6 +50,14 @@ the default window (`lgwin = 22`, i.e. dictionaries up to ~4 MiB are fully usabl
 produced by the reference CLI are decodable as long as the same constraint holds — note that
 the CLI auto-selects a small window for small inputs unless you pass `-w` explicitly
 (e.g. `brotli -q 11 -w 22 -D dict.txt -c payload.txt`).
+
+**Quality support:** custom dictionaries work at **every quality (0–11)**. Builds that bundle
+the upstream `brotli` crate 8.0.4 could panic (`RuntimeError: unreachable`) at qualities 5–9
+for certain payload/dictionary pairs: a backward reference straddling the custom-dictionary
+boundary was truncated below brotli's minimum copy length (2). This is fixed via a small
+vendored patch to the brotli crate (see [`brotli_bugfix.md`](./brotli_bugfix.md) for the exact
+root cause and fix). Regression tests now exercise dictionaries across qualities 0–11, both
+natively (Rust) and through the WASM API.
 
 ### Usage
 
