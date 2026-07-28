@@ -4,7 +4,7 @@ use brotli::enc::encode::{
     BrotliEncoderStateStruct,
 };
 use brotli::enc::StandardAlloc; // Re-exported from alloc_stdlib::StandardAlloc
-use brotli::{self, BrotliDecompressStream, BrotliResult, BrotliState};
+use brotli::{self, Allocator, BrotliDecompressStream, BrotliResult, BrotliState, SliceWrapperMut};
 use wasm_bindgen::prelude::*;
 
 /// Returned by every successful (de)compression.
@@ -57,7 +57,7 @@ pub struct CompressStream {
 #[wasm_bindgen]
 impl CompressStream {
     #[wasm_bindgen(constructor)]
-    pub fn new(quality: Option<u32>) -> CompressStream {
+    pub fn new(quality: Option<u32>, custom_dictionary: Option<Box<[u8]>>) -> CompressStream {
         set_panic_hook();
         let alloc = StandardAlloc::default();
         let mut state = BrotliEncoderStateStruct::new(alloc);
@@ -65,6 +65,11 @@ impl CompressStream {
             None => (),
             Some(quality) => {
                 state.set_parameter(BrotliEncoderParameter::BROTLI_PARAM_QUALITY, quality);
+            }
+        }
+        if let Some(dict) = custom_dictionary {
+            if !dict.is_empty() {
+                state.set_custom_dictionary(dict.len(), &dict);
             }
         }
         Self {
@@ -191,13 +196,21 @@ pub struct DecompressStream {
 
 #[wasm_bindgen]
 impl DecompressStream {
-    #[allow(clippy::new_without_default)]
     #[wasm_bindgen(constructor)]
-    pub fn new() -> Self {
+    pub fn new(custom_dictionary: Option<Box<[u8]>>) -> Self {
         set_panic_hook();
         let alloc = StandardAlloc::default();
+        let state = match custom_dictionary {
+            Some(dict) if !dict.is_empty() => {
+                let mut alloc_u8 = StandardAlloc::default();
+                let mut dict_mem = alloc_u8.alloc_cell(dict.len());
+                dict_mem.slice_mut().copy_from_slice(&dict);
+                BrotliState::new_with_custom_dictionary(alloc_u8, alloc, alloc, dict_mem)
+            }
+            _ => BrotliState::new(alloc, alloc, alloc),
+        };
         Self {
-            state: Some(BrotliState::new(alloc, alloc, alloc)),
+            state: Some(state),
             total_out: 0,
         }
     }
