@@ -18,8 +18,14 @@ lto = true
 opt-level = 's'
 
 [dependencies]
-wasm-bindgen = { version = "0.2.108", features = ["serde-serialize"] }
-brotli = "5.0"
+wasm-bindgen = "0.2.108"
+brotli = "8"
 console_error_panic_hook = { version = "0.1", optional = true }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0" }
+serde-wasm-bindgen = "0.6"
+
+# Locally patched copy of brotli 8.0.4. The upstream crate (latest on crates.io is
+# 8.0.4) panics when compressing certain payloads with a custom dictionary at qualities
+# 5-9 (see brotli_bugfix.md). Remove this patch once an upstream release ships the fix.
+[patch.crates-io]
+brotli = { path = "vendor/brotli" }

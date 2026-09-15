@@ -1,6 +1,6 @@
 {
-  "name": "brotli-wasm",
-  "version": "3.0.1",
+  "name": "brotli-wasm-custom-dictionary",
+  "version": "3.1.1",
   "description": "A reliable compressor and decompressor for Brotli, supporting node & browsers via wasm",
   "types": "./index.d.ts",
   "main": "./index.node.js",
@@ -27,7 +27,8 @@
   "scripts": {
     "build": "node ./build.js",
     "pretest": "npm run build",
-    "test": "npm run test:node && npm run test:esm && npm run test:webpack",
+    "test:native": "cargo test --test repro_dictionary_panic",
+    "test": "npm run test:native && npm run test:node && npm run test:esm && npm run test:webpack",
     "test:node": "ts-mocha -p test/tsconfig.json 'test/**/*.spec.ts'",
     "test:webpack": "karma start ./karma-webpack.conf.js",
     "test:esm": "karma start ./karma-esm.conf.js",
@@ -36,7 +37,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/httptoolkit/brotli-wasm.git"
+    "url": "git+ssh://git@github.com/kyr0/brotli-wasm.git"
   },
   "keywords": [
     "brotli",
@@ -44,12 +45,12 @@
     "compression",
     "decompression"
   ],
-  "author": "Tim Perry <tim@httptoolkit.tech>",
+  "author": "Tim Perry <tim@httptoolkit.tech>, Aron Homberg <info@aron-homberg.de>",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/httptoolkit/brotli-wasm/issues"
+    "url": "https://github.com/kyr0/brotli-wasm/issues"
   },
-  "homepage": "https://github.com/httptoolkit/brotli-wasm#readme",
+  "homepage": "https://github.com/kyr0/brotli-wasm#readme",
   "engines": {
     "node": ">=v18.0.0"
   },
