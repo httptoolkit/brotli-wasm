@@ -21,6 +21,12 @@ shell.exec('wasm-pack build --target nodejs');
 shell.mv('pkg', 'pkg.node');
 shell.rm('pkg.node/{LICENSE,package.json,README.md,.gitignore}');
 
+// Create the esm node output
+shell.rm('-rf', 'pkg');
+shell.exec('wasm-pack build --target experemintal-nodejs-module');
+shell.mv('pkg', 'pkg.node.esm');
+shell.rm('pkg.node/{LICENSE,package.json,README.md,.gitignore}');
+
 // Create the web output
 shell.rm('-rf', 'pkg');
 shell.exec('wasm-pack build --target web');
