@@ -108,3 +108,5 @@ dist
 /pkg
 /pkg.*/
 .idea/
+
+target/

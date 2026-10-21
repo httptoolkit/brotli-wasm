@@ -1,6 +1,8 @@
 # brotli-wasm [![Build Status](https://github.com/httptoolkit/brotli-wasm/workflows/CI/badge.svg)](https://github.com/httptoolkit/brotli-wasm/actions) [![Available on NPM](https://img.shields.io/npm/v/brotli-wasm.svg)](https://npmjs.com/package/brotli-wasm)
 
-> _Part of [HTTP Toolkit](https://httptoolkit.tech): powerful tools for building, testing & debugging HTTP(S)_
+> _Fork of [httptoolkit/brotli-wasm](https://github.com/httptoolkit/brotli-wasm), published as
+> [`@kyr0/brotli-wasm`](https://npmjs.com/package/@kyr0/brotli-wasm), adding custom dictionary
+> support for compression & decompression (one-shot and streaming) and vendoring the Brotli crate to fix several issues, including issues with custom dictionaries._
 
 **A reliable compressor and decompressor for Brotli, supporting node & browsers via wasm**
 
@@ -13,7 +15,7 @@ This is battle-tested, in production use in both node & browsers as part of [HTT
 ## Getting started
 
 ```
-npm install brotli-wasm
+npm install brotli-wasm-custom-dictionary
 ```
 
 You should be able to import this directly into Node, as normal, or in a browser using any bundler that supports ES modules & webassembly (e.g. Webpack v4 or v5, Vite, Rollup, and most others).
@@ -22,10 +24,40 @@ For each target (node.js, commonjs bundlers & ESM bundlers) this module exports 
 
 In all builds (after waiting for the exported promise in browsers) the module exposes two core methods:
 
-* `compress(Buffer, [options])` - compresses a buffer using Brotli, returning the compressed buffer. An optional options object can be provided. The only currently supported option is `quality`: a number between 1 and 11.
-* `decompress(Buffer)` - decompresses a buffer using Brotli, returning the original raw data.
+* `compress(Buffer, [options])` - compresses a buffer using Brotli, returning the compressed buffer. An optional options object can be provided. The supported options are `quality`: a number between 1 and 11, and `customDictionary`: a `Uint8Array` to use as a raw (LZ77) dictionary.
+* `decompress(Buffer, [options])` - decompresses a buffer using Brotli, returning the original raw data. An optional options object can be provided; the supported option is `customDictionary`: a `Uint8Array` holding the same raw dictionary that was used for compression.
 
-For advanced use data-streaming use cases, `CompressStream` and `DecompressStream` classes for streaming compression are also available. See [the tests](https://github.com/httptoolkit/brotli-wasm/blob/main/test/brotli.spec.ts) for example usage.
+For advanced use data-streaming use cases, `CompressStream` and `DecompressStream` classes for streaming compression are also available. Both constructors accept an optional custom dictionary too (`new CompressStream(quality?, customDictionary?)`, `new DecompressStream(customDictionary?)`). See [the tests](https://github.com/kyr0/brotli-wasm/blob/main/test/brotli.spec.ts) for example usage.
+
+### Custom dictionaries
+
+A custom dictionary lets the compressor reference common phrases from data you already have
+(e.g. previous similar documents), dramatically shrinking output for small, similar payloads:
+
+```javascript
+const compressed = brotli.compress(payload, { quality: 11, customDictionary: dictionary });
+const decompressed = brotli.decompress(compressed, { customDictionary: dictionary });
+```
+
+This uses raw (LZ77) dictionary semantics, exactly like the reference C encoder's
+`BrotliEncoderAttachPreparedDictionary(..., BROTLI_SHARED_DICTIONARY_RAW, ...)`, i.e. the
+`brotli` CLI's `-D FILE` flag. The dictionary is **not** embedded in the compressed stream;
+the decoder must attach the identical dictionary, and decompression fails loudly without it.
+
+One constraint: the usable dictionary size is limited by the stream's window size — at most
+`2^lgwin - 16` bytes (the tail of an oversized dictionary is used). This package encodes with
+the default window (`lgwin = 22`, i.e. dictionaries up to ~4 MiB are fully usable). Streams
+produced by the reference CLI are decodable as long as the same constraint holds — note that
+the CLI auto-selects a small window for small inputs unless you pass `-w` explicitly
+(e.g. `brotli -q 11 -w 22 -D dict.txt -c payload.txt`).
+
+**Quality support:** custom dictionaries work at **every quality (0–11)**. Builds that bundle
+the upstream `brotli` crate 8.0.4 could panic (`RuntimeError: unreachable`) at qualities 5–9
+for certain payload/dictionary pairs: a backward reference straddling the custom-dictionary
+boundary was truncated below brotli's minimum copy length (2). This is fixed via a small
+vendored patch to the brotli crate (see [`brotli_bugfix.md`](./brotli_bugfix.md) for the exact
+root cause and fix). Regression tests now exercise dictionaries across qualities 0–11, both
+natively (Rust) and through the WASM API.
 
 ### Usage
 
@@ -34,7 +66,7 @@ If you want to support node & browsers with the same code, you can use the `awai
 #### In node.js:
 
 ```javascript
-const brotli = require('brotli-wasm');
+const brotli = require('@kyr0/brotli-wasm');
 
 const compressedData = brotli.compress(Buffer.from('some input'));
 const decompressedData = brotli.decompress(compressedData);
@@ -45,7 +77,7 @@ console.log(Buffer.from(decompressedData).toString('utf8')); // Prints 'some inp
 #### In browsers:
 
 ```javascript
-import brotliPromise from 'brotli-wasm'; // Import the default export
+import brotliPromise from '@kyr0/brotli-wasm'; // Import the default export
 
 const brotli = await brotliPromise; // Import is async in browsers due to wasm requirements!
 
@@ -63,14 +95,14 @@ console.log(textDecoder.decode(decompressedData)); // Prints 'some input'
 
 You can also load it from a CDN like so:
 ```javascript
-const brotli = await import("https://unpkg.com/brotli-wasm@3.0.0/index.web.js?module").then(m => m.default);
+const brotli = await import("https://unpkg.com/@kyr0/brotli-wasm@3.1.0/index.web.js?module").then(m => m.default);
 ```
 
 The package itself has no runtime dependencies, although if you prefer using `Buffer` over using `TextEncoder/TextDecoder` you may want a [browser Buffer polyfill](https://www.npmjs.com/package/browserify-zlib).
 
 ##### Using an importmap
 
-If you've installed `brotli-wasm` as an NPM package, you can load it from your `node_modules` subfolder:
+If you've installed `@kyr0/brotli-wasm` as an NPM package, you can load it from your `node_modules` subfolder:
 
 ```html
 <!-- index.html -->
@@ -81,7 +113,7 @@ If you've installed `brotli-wasm` as an NPM package, you can load it from your `
         <script type="importmap">
             {
                 "imports": {
-                    "brotli-wasm": "/node_modules/brotli-wasm/index.web.js"
+                    "brotli-wasm": "/node_modules/@kyr0/brotli-wasm/index.web.js"
                 }
             }
         </script>
@@ -92,7 +124,7 @@ If you've installed `brotli-wasm` as an NPM package, you can load it from your `
 
 ```javascript
 // main.js
-import brotliPromise from 'brotli-wasm';
+import brotliPromise from '@kyr0/brotli-wasm';
 const brotli = await brotliPromise;
 
 const input = 'some input';
@@ -105,7 +137,7 @@ console.log(new TextDecoder().decode(decompressedData)); // Prints 'some input'
 #### In browser with streams:
 
 ```javascript
-import brotliPromise from 'brotli-wasm'; // Import the default export
+import brotliPromise from '@kyr0/brotli-wasm'; // Import the default export
 
 const brotli = await brotliPromise; // Import is async in browsers due to wasm requirements!
 
