@@ -10,3 +10,7 @@ module.exports.default = module.exports;
 // Without this, ts-loader gets annoyed by imports for the pure type. Clear ts-loader bug,
 // but this is a quick & easy fix on our end:
 module.exports.BrotliWasmType = undefined;
+
+module.exports.init = (_) => {
+    return globalThis.Promise.resolve();
+}

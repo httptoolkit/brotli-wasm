@@ -6,3 +6,5 @@
 // don't try to guess the file extension.
 import init, * as brotliWasm from "./pkg.web/brotli_wasm.js";
 export default init().then(() => brotliWasm);
+
+export { init };
