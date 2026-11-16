@@ -213,6 +213,68 @@ describe("Brotli-wasm", () => {
         expect(() => stream.free()).to.not.throw();
     });
 
+    it("releases CompressStream memory on completion without an explicit free()", function () {
+        this.timeout(30000);
+        const input = textEncoder.encode("hello brotli ".repeat(100));
+
+        // Each encoder holds ~32MB, so leaking them would exhaust the 4GB wasm32 memory
+        for (let i = 0; i < 200; i++) {
+            const stream = new brotli.CompressStream();
+            stream.compress(input, 1024);
+            let result;
+            do {
+                result = stream.compress(undefined, 1024);
+            } while (result.code === brotli.BrotliStreamResultCode.NeedsMoreOutput);
+            expect(result.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
+        }
+    });
+
+    it("releases DecompressStream memory on completion without an explicit free()", function () {
+        this.timeout(30000);
+        const input = new Uint8Array(1024 * 1024);
+        for (let i = 0; i < input.length; i += 65536) {
+            getRandomValues(input.subarray(i, i + 65536));
+        }
+        const compressed = brotli.compress(input, { quality: 1 });
+
+        for (let i = 0; i < 1000; i++) {
+            const stream = new brotli.DecompressStream();
+            const result = stream.decompress(compressed, input.length + 1);
+            expect(result.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
+        }
+    });
+
+    it("keeps reporting success for calls after a CompressStream finishes", () => {
+        const stream = new brotli.CompressStream();
+        stream.compress(textEncoder.encode("Some text"), 100);
+        const finishResult = stream.compress(undefined, 100);
+        expect(finishResult.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
+
+        const repeatResult = stream.compress(undefined, 100);
+        expect(repeatResult.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
+        expect(repeatResult.buf.length).to.equal(0);
+
+        expect(() =>
+            stream.compress(textEncoder.encode("More text"), 100)
+        ).to.throw('CompressStream has already finished');
+
+        expect(() => stream.free()).to.not.throw();
+    });
+
+    it("keeps reporting success for calls after a DecompressStream finishes", () => {
+        const compressed = brotli.compress(textEncoder.encode("Some text"));
+        const stream = new brotli.DecompressStream();
+        const result = stream.decompress(compressed, 100);
+        expect(result.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
+
+        const repeatResult = stream.decompress(compressed, 100);
+        expect(repeatResult.code).to.equal(brotli.BrotliStreamResultCode.ResultSuccess);
+        expect(repeatResult.buf.length).to.equal(0);
+        expect(repeatResult.input_offset).to.equal(0);
+
+        expect(() => stream.free()).to.not.throw();
+    });
+
     it("can streamingly compress & decompress back to the original result", () => {
         const s = "Some thrilling text I urgently need to compress";
         const encInput = textEncoder.encode(s);
